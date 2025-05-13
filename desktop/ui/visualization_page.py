@@ -1,29 +1,15 @@
-from PyQt5.QtWidgets import ( QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QLineEdit, QFrame )
-from .translations import tr
+from PyQt5.QtWidgets import ( QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QLineEdit )
+from ui.translations import tr
+from ui.widgets import CommonWidgets
 
 class VisualizationPage(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.addWidget(self.build_header())
+        layout.addWidget(CommonWidgets.build_header(tr('visualization')))
         layout.addLayout(self.build_content())
-        layout.addWidget(self.build_footer())
+        layout.addWidget(CommonWidgets.build_footer())
 
-    def build_header(self):
-        header = QFrame()
-        header.setObjectName("Header")
-        header.setLayout(QHBoxLayout())
-        label = QLabel(tr('visualization'))
-        label.setStyleSheet("font-size: 20px; font-weight: bold; padding: 10px;")
-        header.layout().addWidget(label)
-        return header
-
-    def build_footer(self):
-        footer = QFrame()
-        footer.setObjectName("Footer")
-        footer.setLayout(QHBoxLayout())
-        footer.layout().addWidget(QLabel("Footer content here"))
-        return footer
 
     def build_content(self):
         vbox = QVBoxLayout()

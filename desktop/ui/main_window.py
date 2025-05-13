@@ -1,6 +1,5 @@
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMainWindow, QStatusBar, QWidget, QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QStyle
 import sys
-
 from .main_page import MainPage
 from .visualization_page import VisualizationPage
 from .packages_page import PackagesPage
@@ -8,9 +7,6 @@ from .settings_page import SettingsPage
 from .themes import light_theme, dark_theme, current_theme
 from .translations import tr, current_language
 from .widgets import NavButton
-
-from PyQt5.QtWidgets import QMainWindow, QStatusBar, QWidget, QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QStyle
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
