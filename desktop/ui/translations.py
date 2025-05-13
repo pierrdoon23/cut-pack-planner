@@ -24,7 +24,7 @@ translations = {
         'api_url': "API URL",
         'port': "Порт",
         'report': "📊 Отчет",
-        'report_text': "Здесь вы можете увидеть подробный отчет об операциях."
+        'report_text': "Здесь вы можете увидеть подробный отчет об операциях.",
     },
     'en': {
         'statistics': "\U0001F4CA Main Page",
