@@ -18,12 +18,12 @@ class NavButton(QPushButton):
 class CommonWidgets():
 
     @staticmethod
-    def build_header(self):
+    def build_header(title):
         header = QFrame()
         header.setObjectName("Header")
         header.setLayout(QHBoxLayout())
         header.setFixedHeight(60)
-        label = QLabel(tr('settings'))
+        label = QLabel(title)
         label.setStyleSheet("font-size: 20px; font-weight: bold; padding: 10px;")
         header.layout().addWidget(label)
         return header

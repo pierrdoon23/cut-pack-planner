@@ -6,6 +6,7 @@ import datetime
 import json
 import os
 from ui.translations import tr
+from ui.widgets import CommonWidgets
 
 
 class ReportPage(QWidget):
@@ -16,6 +17,7 @@ class ReportPage(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
+        layout.addWidget(CommonWidgets.build_header(tr('report')))
         self.header = QLabel(tr("report_text"))
         self.view_selector = QComboBox()
         self.view_selector.addItems(["📋 Таблица", "📈 Диаграмма Ганта"])
@@ -26,6 +28,7 @@ class ReportPage(QWidget):
 
         self.view_area = QVBoxLayout()
         layout.addLayout(self.view_area)
+        layout.addWidget(CommonWidgets.build_footer())
 
         self.load_data()
         self.update_view()

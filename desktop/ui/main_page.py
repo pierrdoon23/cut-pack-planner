@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import ( QWidget, QLabel, QVBoxLayout, QHBoxLayout )
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 from ui.translations import tr
@@ -8,34 +8,52 @@ class MainPage(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.addWidget(CommonWidgets.build_header(tr('main')))
+        layout.addWidget(CommonWidgets.build_header(tr('statistics')))
         layout.addLayout(self.build_content())
         layout.addWidget(CommonWidgets.build_footer())
 
     def build_content(self):
         vbox = QVBoxLayout()
+
+        # Статистические карточки
         cards_layout = QHBoxLayout()
         self.add_stat_card(cards_layout, tr('rolls'), "48", "+4 за 24ч")
         self.add_stat_card(cards_layout, tr('cutting_maps'), "12", "+2 за 24ч")
         self.add_stat_card(cards_layout, tr('packages'), "36", "+8 за 24ч")
         vbox.addLayout(cards_layout)
 
+        # Графики
         charts_layout = QHBoxLayout()
-        charts_layout.addWidget(self.create_bar_chart())
+
+        # Добавляем подпись над гистограммой
+        bar_chart_layout = QVBoxLayout()
+        title = QLabel(tr('plan_completion'))
+        title.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 5px;")
+        bar_chart_layout.addWidget(title)
+        bar_chart_layout.addWidget(self.create_bar_chart())
+        charts_layout.addLayout(bar_chart_layout)
+
         charts_layout.addWidget(self.create_donut_chart(tr('cutting_types'), [58, 42], ["Уголки", "Ленты"]))
         charts_layout.addWidget(self.create_donut_chart(tr('usage_and_waste'), [80, 20], ["Использовано", "Отходы"], ["green", "red"]))
+
         vbox.addLayout(charts_layout)
         return vbox
 
     def add_stat_card(self, layout, title, value, subtitle):
         card = QVBoxLayout()
-        card.addWidget(QLabel(title))
+
+        label_title = QLabel(title)
+        label_title.setStyleSheet("font-size: 14px; font-weight: bold;")
+        card.addWidget(label_title)
+
         val = QLabel(value)
-        val.setStyleSheet("font-size: 24px;")
+        val.setStyleSheet("font-size: 26px; font-weight: bold; color: #333333;")
         card.addWidget(val)
+
         sub = QLabel(subtitle)
-        sub.setStyleSheet("color: gray;")
+        sub.setStyleSheet("color: gray; font-size: 12px;")
         card.addWidget(sub)
+
         w = QWidget()
         w.setLayout(card)
         w.setStyleSheet("background: #f5f5f5; border-radius: 10px; padding: 10px;")
@@ -44,11 +62,14 @@ class MainPage(QWidget):
     def create_bar_chart(self):
         fig, ax = plt.subplots(figsize=(3, 2))
         ax.bar(["Пн", "Вт", "Ср", "Чт", "Пт"], [5, 7, 3, 8, 6], color='skyblue')
+        ax.set_ylabel("Кол-во")
+        fig.tight_layout()
         return FigureCanvas(fig)
 
     def create_donut_chart(self, title, values, labels, colors=None):
         fig, ax = plt.subplots(figsize=(2.5, 2.5))
         ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90,
                colors=colors, wedgeprops=dict(width=0.4))
-        ax.set_title(title)
+        ax.set_title(title, fontsize=12)
+        fig.tight_layout()
         return FigureCanvas(fig)

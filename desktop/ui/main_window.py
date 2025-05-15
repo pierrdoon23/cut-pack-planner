@@ -25,32 +25,28 @@ class MainWindow(QMainWindow):
         navbar_widget.setLayout(self.navbar)
         layout.addWidget(navbar_widget, 0)
 
-        self.stack = QStackedWidget()  # сначала создаем стек
+        self.stack = QStackedWidget()
         layout.addWidget(self.stack, 1)
 
-        # теперь безопасно добавляем страницы
         self.buttons = []
         self.stats_page = MainPage()
         self.visual_page = VisualizationPage()
         self.packages_page = PackagesPage()
-        self.settings_page = SettingsPage(self.change_language, self.change_theme)
         self.report_page = ReportPage()
+        self.settings_page = SettingsPage(self.change_language, self.change_theme)
 
-        # добавляем все страницы в стек
         self.stack.addWidget(self.stats_page)
         self.stack.addWidget(self.visual_page)
         self.stack.addWidget(self.packages_page)
-        self.stack.addWidget(self.settings_page)
         self.stack.addWidget(self.report_page)
-
-
+        self.stack.addWidget(self.settings_page)
         self.stack.setCurrentWidget(self.stats_page)
 
         self.buttons.append(NavButton(tr('statistics'), self.style().standardIcon(QStyle.SP_ComputerIcon), lambda: self.stack.setCurrentWidget(self.stats_page), self.buttons))
         self.buttons.append(NavButton(tr('visualization'), self.style().standardIcon(QStyle.SP_FileDialogListView), lambda: self.stack.setCurrentWidget(self.visual_page), self.buttons))
         self.buttons.append(NavButton(tr('packages'), self.style().standardIcon(QStyle.SP_FileDialogDetailedView), lambda: self.stack.setCurrentWidget(self.packages_page), self.buttons))
-        self.buttons.append(NavButton(tr('settings'), self.style().standardIcon(QStyle.SP_DialogHelpButton), lambda: self.stack.setCurrentWidget(self.settings_page), self.buttons))
         self.buttons.append(NavButton(tr('report'), self.style().standardIcon(QStyle.SP_FileDialogContentsView), lambda: self.stack.setCurrentWidget(self.report_page), self.buttons))
+        self.buttons.append(NavButton(tr('settings'), self.style().standardIcon(QStyle.SP_DialogHelpButton), lambda: self.stack.setCurrentWidget(self.settings_page), self.buttons))
 
 
         for btn in self.buttons:

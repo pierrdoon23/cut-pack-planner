@@ -1,6 +1,7 @@
 import json
 from PyQt5.QtWidgets import ( QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QLineEdit, QComboBox, QSizePolicy, QCheckBox, QTableWidgetItem )
 from .translations import tr
+from ui.widgets import CommonWidgets
 
 class PackagesPage(QWidget):
     def __init__(self):
@@ -9,6 +10,7 @@ class PackagesPage(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout()
+        layout.addWidget(CommonWidgets.build_header(tr('packages')))
 
         # ----- Форма добавления -----
         form_layout = QHBoxLayout()
@@ -60,6 +62,7 @@ class PackagesPage(QWidget):
         ])
         layout.addWidget(QLabel("\nСписок заданий на нарезку пакетов"))
         layout.addWidget(self.table)
+        layout.addWidget(CommonWidgets.build_footer())
 
         self.setLayout(layout)
 
