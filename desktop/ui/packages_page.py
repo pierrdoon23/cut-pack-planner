@@ -1,4 +1,3 @@
-import json
 from PyQt5.QtWidgets import ( QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QLineEdit, QComboBox, QSizePolicy, QCheckBox, QTableWidgetItem )
 from .translations import tr
 from ui.widgets import CommonWidgets
@@ -66,28 +65,5 @@ class PackagesPage(QWidget):
 
         self.setLayout(layout)
 
-        self.load_data()
-
-    def load_data(self):
-        try:
-            with open("desktop/data2.json", "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            self.table.setRowCount(len(data))
-            for row, task in enumerate(data):
-                self.table.setItem(row, 0, QTableWidgetItem(task["id"]))
-                self.table.setItem(row, 1, QTableWidgetItem(task["type"]))
-                self.table.setItem(row, 2, QTableWidgetItem(task["seam"]))
-
-                size_str = f"{task['width']} x {task['height']}"
-                self.table.setItem(row, 3, QTableWidgetItem(size_str))
-
-                self.table.setItem(row, 4, QTableWidgetItem(str(task["count"])))
-
-                self.table.setItem(row, 5, QTableWidgetItem("✓" if task["double"] else "—"))
-                self.table.setItem(row, 6, QTableWidgetItem("✓" if task["tape"] else "—"))
-
-                self.table.setItem(row, 7, QTableWidgetItem("🗑"))
-
-        except FileNotFoundError:
-            self.table.setRowCount(0)
+        # Оставляем пустую таблицу, загрузка будет через API в будущем
+        self.table.setRowCount(0)

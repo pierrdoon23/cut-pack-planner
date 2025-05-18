@@ -34,5 +34,5 @@ class CommonWidgets():
         footer.setObjectName("Footer")
         footer.setFixedHeight(40)
         footer.setLayout(QHBoxLayout())
-        footer.layout().addWidget(QLabel("Footer content here"))
+        footer.layout().addWidget(QLabel("© 2025 Оптимизация раскроя. Все права защищены."))
         return footer

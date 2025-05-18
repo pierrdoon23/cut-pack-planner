@@ -18,13 +18,23 @@ class MainPage(QWidget):
         vbox = QVBoxLayout()
 
         # --- Загрузка всех данных с API ---
-        stats = self.fetch_data("http://localhost:8000/stats")
+        rolls_count = self.fetch_data("http://localhost:8000/rolls_count")
+        cutting_maps_count = self.fetch_data("http://localhost:8000/cutting_maps_count")
+        packages_count = self.fetch_data("http://localhost:8000/packages_count")
         bar_data = self.fetch_data("http://localhost:8000/bar_chart")
         donut_cutting = self.fetch_data("http://localhost:8000/donut_cutting")
         donut_usage = self.fetch_data("http://localhost:8000/donut_usage")
 
         # --- Статистические карточки ---
         cards_layout = QHBoxLayout()
+        
+        # Формируем статистику из полученных данных
+        stats = [
+            {"name": "rolls", "value": rolls_count.get("total", 0), "change": f"+{rolls_count.get('last_24h', 0)} за 24ч"},
+            {"name": "cutting_maps", "value": cutting_maps_count.get("total", 0), "change": f"+{cutting_maps_count.get('last_24h', 0)} за 24ч"},
+            {"name": "packages", "value": packages_count.get("total", 0), "change": f"+{packages_count.get('last_24h', 0)} за 24ч"}
+        ]
+        
         for stat in stats:
             self.add_stat_card(cards_layout, tr(stat['name']), str(stat['value']), stat['change'])
         vbox.addLayout(cards_layout)
@@ -61,20 +71,14 @@ class MainPage(QWidget):
 
     def get_fallback_data(self, url):
         # Возврат заглушек если сервер не отвечает
-        if "stats" in url:
-            return [
-                {"name": "rolls", "value": 0, "change": ""},
-                {"name": "cutting_maps", "value": 0, "change": ""},
-                {"name": "packages", "value": 0, "change": ""}
-            ]
+        if "rolls_count" in url or "cutting_maps_count" in url or "packages_count" in url:
+            return {"total": 0, "last_24h": 0}
         elif "bar_chart" in url:
             return {"labels": ["Пн", "Вт", "Ср", "Чт", "Пт"], "values": [0, 0, 0, 0, 0]}
-        elif "donut_cutting" in url or "donut_usage" in url:
-            return {
-                "labels": ["N/A"],
-                "values": [100],
-                "colors": ["#cccccc"]
-            }
+        elif "donut_cutting" in url:
+            return [{"type": "N/A", "percent": 100}]
+        elif "donut_usage" in url:
+            return {"used_percent": 0, "wasted_percent": 0}
         return {}
 
     def add_stat_card(self, layout, title, value, subtitle):
@@ -107,13 +111,16 @@ class MainPage(QWidget):
         return FigureCanvas(fig)
 
     def create_donut_chart(self, title, data):
-        values = data.get("values", [])
-        labels = data.get("labels", [])
-        colors = data.get("colors", None)
+        if "type" in str(data):  # Для donut_cutting
+            values = [item["percent"] for item in data]
+            labels = [item["type"] for item in data]
+        else:  # Для donut_usage
+            values = [data.get("used_percent", 0), data.get("wasted_percent", 0)]
+            labels = ["Использовано", "Отходы"]
 
         fig, ax = plt.subplots(figsize=(2.5, 2.5))
         ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90,
-               colors=colors, wedgeprops=dict(width=0.4))
+               wedgeprops=dict(width=0.4))
         ax.set_title(title, fontsize=12)
         fig.tight_layout()
         return FigureCanvas(fig)
