@@ -49,15 +49,33 @@ class MainPage(QWidget):
 
     def fetch_data(self, url):
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=1.5)
             if response.status_code == 200:
                 return response.json()
             else:
-                print(f"Ошибка загрузки с {url}: {response.status_code}")
-                return []
+                print(f"Ошибка {url}: {response.status_code}")
+                return self.get_fallback_data(url)
         except Exception as e:
-            print(f"Ошибка подключения к {url}:", e)
-            return []
+            print(f"Сервер недоступен: {url}", e)
+            return self.get_fallback_data(url)
+
+    def get_fallback_data(self, url):
+        # Возврат заглушек если сервер не отвечает
+        if "stats" in url:
+            return [
+                {"name": "rolls", "value": 0, "change": ""},
+                {"name": "cutting_maps", "value": 0, "change": ""},
+                {"name": "packages", "value": 0, "change": ""}
+            ]
+        elif "bar_chart" in url:
+            return {"labels": ["Пн", "Вт", "Ср", "Чт", "Пт"], "values": [0, 0, 0, 0, 0]}
+        elif "donut_cutting" in url or "donut_usage" in url:
+            return {
+                "labels": ["N/A"],
+                "values": [100],
+                "colors": ["#cccccc"]
+            }
+        return {}
 
     def add_stat_card(self, layout, title, value, subtitle):
         card = QVBoxLayout()

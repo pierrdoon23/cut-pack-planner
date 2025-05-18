@@ -10,3 +10,5 @@ PORT = int(os.getenv("PORT", 8000))
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host=HOST, port=PORT, reload=True)
 
+
+# /backend  python3 -m app.run

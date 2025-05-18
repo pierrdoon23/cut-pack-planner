@@ -7,7 +7,7 @@ class StatSchema(BaseModel):
     change: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ChartSchema(BaseModel):
     labels: List[str]
