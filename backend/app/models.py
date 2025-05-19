@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from sqlalchemy import Column, Integer, String, ForeignKey, Float, Boolean, DateTime, DECIMAL, Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
-from database import Base
+from app.database import Base
 
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -64,15 +64,17 @@ class Machine(Base):
 
 class Task(Base):
     __tablename__ = "tasks"
-    
+
     id = Column(Integer, primary_key=True)
     base_material_id = Column(Integer, ForeignKey("base_materials.id"))
     target_packaging_id = Column(Integer, ForeignKey("target_packaging.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
-    
+    machine_id = Column(Integer, ForeignKey("machines.id"))
+
     base_material = relationship("BaseMaterial")
     target_packaging = relationship("TargetPackaging")
     user = relationship("User")
+    machine = relationship("Machine")
 
 class TaskInfo(Base):
     __tablename__ = "task_info"

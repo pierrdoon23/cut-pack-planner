@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
-from backend.app.models import PackagingType, SeamType, TaskStatus, UserRole
+from app.models import PackagingType, SeamType, TaskStatus, UserRole
 
 # Схемы для основных сущностей
 class BaseMaterialSchema(BaseModel):
@@ -51,6 +51,7 @@ class TaskSchema(BaseModel):
     base_material_id: int
     target_packaging_id: int
     user_id: int
+    machine_id: int
 
     class Config:
         from_attributes = True

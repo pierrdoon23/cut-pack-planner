@@ -27,6 +27,7 @@ translations = {
         'report': "📊 Отчет",
         'report_text': "Здесь вы можете увидеть подробный отчет об операциях.",
         'load_maps': 'Загрузить карты',
+        'create': 'Создать'
     },
     'en': {
         'statistics': "\U0001F4CA Main Page",
@@ -55,7 +56,7 @@ translations = {
         'report': "📊 Report",
         'report_text': "Here you can see a detailed report of operations.",
         'load_maps': 'Load Cards',
-
+        'create': 'Create'
     }
 }
 

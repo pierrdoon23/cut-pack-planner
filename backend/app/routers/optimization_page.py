@@ -1,27 +1,35 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app import crud, database, schemas
-from app.database import get_db
-from app.models import CuttingMap
+from app import crud, schemas, database
+from app.models import TaskStatus
 
 router = APIRouter()
 
+@router.get("/tasks", response_model=list[schemas.TaskSchema], tags=["Tasks"])
+def get_all_tasks(db: Session = Depends(database.get_db)):
+    return crud.get_tasks(db)
 
-@router.get("/cutting-maps")
-def get_cutting_maps(db: Session = Depends(get_db)):
-    maps = db.query(CuttingMap).order_by(CuttingMap.created_at.desc()).all()
-    return [{"id": m.id, "created_at": m.created_at.isoformat()} for m in maps]
+@router.get("/task-info", response_model=list[schemas.TaskInfoSchema], tags=["Tasks"])
+def get_all_task_info(db: Session = Depends(database.get_db)):
+    return crud.get_tasks(db)
 
-@router.post("/select", tags=["Optimization"])
-def select_source(roll: schemas.OptimizationRollSchema, db: Session = Depends(database.get_db)):
-    return crud.add_roll(db, roll, roll_type="source")
+@router.get("/base-materials", response_model=list[schemas.BaseMaterialSchema], tags=["Materials"])
+def get_base_materials(db: Session = Depends(database.get_db)):
+    return crud.get_base_materials(db)
 
-@router.post("/set", tags=["Optimization"])
-def set_target(roll: schemas.OptimizationRollSchema, db: Session = Depends(database.get_db)):
-    return crud.add_roll(db, roll, roll_type="target")
+@router.get("/target-packaging", response_model=list[schemas.TargetPackagingSchema], tags=["Packaging"])
+def get_target_packaging(db: Session = Depends(database.get_db)):
+    return crud.get_target_packaging(db)
 
-@router.get("/optimize", response_model=schemas.OptimizationResultSchema, tags=["Optimization"])
-def optimize(db: Session = Depends(database.get_db)):
-    result = crud.run_cutting_optimization(db)
-    return schemas.OptimizationResultSchema(**result)
+@router.post("/tasks", response_model=schemas.TaskSchema, tags=["Tasks"])
+def create_task(task: schemas.TaskCreate, db: Session = Depends(database.get_db)):
+    return crud.create_task(db=db, task=task)
+
+@router.put("/tasks/{task_id}/status", tags=["Tasks"])
+def update_task_status(task_id: int, status: TaskStatus, db: Session = Depends(database.get_db)):
+    return crud.update_task_status(db=db, task_id=task_id, status=status)
+
+@router.get("/machines", response_model=list[schemas.MachineSchema], tags=["Machines"])
+def get_machines(db: Session = Depends(database.get_db)):
+    return crud.get_machines(db)
 

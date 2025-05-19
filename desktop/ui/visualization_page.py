@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
-    QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QLineEdit, QListWidget, QListWidgetItem,
-    QScrollArea, QSizePolicy
+    QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox, QListWidgetItem, QListWidget,
+    QScrollArea, QMessageBox, QInputDialog
 )
 from PyQt5.QtCore import Qt
 from ui.translations import tr
@@ -35,112 +35,151 @@ class VisualizationPage(QWidget):
         vbox = QVBoxLayout()
         vbox.setSpacing(15)
         vbox.setContentsMargins(10, 10, 10, 10)
-        
-        # Add result label at the top
+    
         self.result_label = QLabel(tr('result'))
         self.result_label.setStyleSheet("margin-bottom: 20px; font-weight: bold;")
         vbox.addWidget(self.result_label)
-        
+    
         vbox.addWidget(QLabel(tr('subtitle')))
 
         hbox = QHBoxLayout()
         hbox.setSpacing(10)
 
+        # Список исходных рулонов
         hbox.addWidget(QLabel(tr('src_rolls')))
-        self.src_rolls_edit = QLineEdit("0")
-        self.src_rolls_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.src_rolls_edit.setMaximumWidth(200)
-        hbox.addWidget(self.src_rolls_edit)
-        select_btn = QPushButton(tr('select'))
-        select_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        select_btn.clicked.connect(self.on_select)
-        select_btn.setMaximumWidth(200)
-        hbox.addWidget(select_btn)
+        self.src_rolls_combo = QComboBox()
+        self.src_rolls_combo.currentIndexChanged.connect(self.on_select_roll)
+        hbox.addWidget(self.src_rolls_combo)
 
+        # Список целевых упаковок
         hbox.addWidget(QLabel(tr('target_rolls')))
-        self.target_rolls_edit = QLineEdit("3")
-        self.target_rolls_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.target_rolls_edit.setMaximumWidth(200)
-        hbox.addWidget(self.target_rolls_edit)
-        set_btn = QPushButton(tr('set'))
-        set_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        set_btn.clicked.connect(self.on_set)
-        set_btn.setMaximumWidth(200)
-        hbox.addWidget(set_btn)
-        params_btn = QPushButton(tr('params'))
-        params_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        params_btn.clicked.connect(self.on_params)
-        params_btn.setMaximumWidth(200)
-        hbox.addWidget(params_btn)
+        self.target_rolls_list = QComboBox()
+        self.src_rolls_combo.currentIndexChanged.connect(self.on_select_roll)
+        hbox.addWidget(self.src_rolls_combo)
+
+        # Список станков
+        hbox.addWidget(QLabel(tr('machine')))
+        self.machine_list = QComboBox()
+        self.src_rolls_combo.currentIndexChanged.connect(self.on_select_roll)
+        hbox.addWidget(self.src_rolls_combo)
 
         vbox.addLayout(hbox)
 
-        btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(10)
+        create_btn = QPushButton(tr('create'))
+        create_btn.setMaximumWidth(200)
+        create_btn.clicked.connect(self.on_create_task)
+        vbox.addWidget(create_btn)
 
-        for btn in [QPushButton(tr('new_map')), QPushButton(tr('export'))]:
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            btn.setMaximumWidth(200)
-            btn_layout.addWidget(btn)
-
-        optimize_btn = QPushButton(tr('optimize'))
-        optimize_btn.setStyleSheet("background-color: #007bff; color: white;")
-        optimize_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        optimize_btn.clicked.connect(self.on_optimize)
-        optimize_btn.setMaximumWidth(200)
-        btn_layout.addWidget(optimize_btn)
-        btn_layout.addStretch()
-
-        vbox.addLayout(btn_layout)
-
-        # Create scrollable list widget
-        list_container = QWidget()
-        list_layout = QVBoxLayout(list_container)
-        
         self.map_list = QListWidget()
-        self.map_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.map_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        list_layout.addWidget(self.map_list)
-        
-        load_maps_btn = QPushButton(tr('load_maps'))
-        load_maps_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        load_maps_btn.clicked.connect(self.on_load_maps)
-        load_maps_btn.setMaximumWidth(400)
-        list_layout.addWidget(load_maps_btn)
-        
-        vbox.addWidget(list_container)
-        vbox.addStretch()
+        vbox.addWidget(self.map_list)
 
+        self.load_selection_lists()
+        self.on_load_maps()
         return vbox
+
     
     def on_load_maps(self):
-        maps = self.fetch_data("http://localhost:8000/cutting-maps")
+        tasks = self.fetch_data("http://localhost:8000/cutting-maps")
+        task_info = self.fetch_data("http://localhost:8000/task-info")
+        machines = self.fetch_data("http://localhost:8000/machines")
+        machine_map = {m['id']: m['name'] for m in machines}
         self.map_list.clear()
-        for m in maps:
-            item_text = f"ID: {m['id']} | Время: {m['created_at']}"
-            self.map_list.addItem(QListWidgetItem(item_text))
+        info_map = {info['task_id']: info for info in task_info}
+        for t in tasks:
+            info = info_map.get(t['id'], {})
+            status = info.get("status", "unknown")
+            created = info.get("start_time", "N/A")
+            machine_name = machine_map.get(t.get('machine_id'), "N/A")
+        self.map_list.addItem(QListWidgetItem(f"Задача ID: {t['id']} | Статус: {status} | Станок: {machine_name} | Начато: {created}"))
 
     def on_select(self):
-        data = self.fetch_data("http://localhost:8000/select", method="POST", json={
-            "length": int(self.src_rolls_edit.text()),
-            "type": "source"
-        })
+        materials = self.fetch_data("http://localhost:8000/base-materials")
+        names = [m['name'] for m in materials]
+        name, ok = QInputDialog.getItem(self, "Выбор материала", "Материалы:", names, 0, False)
+        if ok and name:
+            self.src_rolls_edit.setText(name)
+            self.selected_base_material = next((m for m in materials if m['name'] == name), None)
 
     def on_set(self):
-        data = self.fetch_data("http://localhost:8000/set", method="POST", json={
-            "length": int(self.target_rolls_edit.text()),
-            "type": "target"
-        })
+        targets = self.fetch_data("http://localhost:8000/target-packaging")
+        names = [t['name'] for t in targets]
+        name, ok = QInputDialog.getItem(self, "Выбор упаковки", "Упаковка:", names, 0, False)
+        if ok and name:
+            self.target_rolls_edit.setText(name)
+            self.selected_target_packaging = next((t for t in targets if t['name'] == name), None)
 
-    def on_params(self):
-        data = self.fetch_data("http://localhost:8000/params")
-        print("Параметры:", data)
+    def on_create_task(self):
+        if not all([self.selected_base_material, self.selected_target_packaging, self.selected_machine]):
+            QMessageBox.warning(self, "Ошибка", "Выберите рулоны, упаковку и станок.")
+            return
 
-    def on_optimize(self):
-        data = self.fetch_data("http://localhost:8000/optimize")
-        self.result_label.setText(
-            f"Результаты оптимизации\nЭффективность: {data.get('efficiency', 0)}%, Отходы: {data.get('waste', 0)} мм"
-        )
+        payload = {
+            "base_material_id": self.selected_base_material['id'],
+            "target_packaging_id": self.selected_target_packaging['id'],
+            "user_id": 1,
+            "machine_id": self.selected_machine['id']
+        }
+
+        self.fetch_data("http://localhost:8000/create-task", method="POST", json=payload)
+        self.on_load_maps()
+
+    def on_select_machine(self):
+        machines = self.fetch_data("http://localhost:8000/machines")
+        names = [m['name'] for m in machines]
+        name, ok = QInputDialog.getItem(self, "Выбор станка", "Станки:", names, 0, False)
+        if ok and name:
+            self.machine_edit.setText(name)
+            self.selected_machine = next((m for m in machines if m['name'] == name), None)
+
+    def load_selection_lists(self):
+        self.selected_base_material = None
+        self.selected_target_packaging = None
+        self.selected_machine = None
+
+        # Загрузка рулонов
+        materials = self.fetch_data("http://localhost:8000/base-materials")
+        self.src_rolls_combo.clear()
+        for m in materials:
+            self.src_rolls_combo.addItem(m["name"], m)
+            item.setData(Qt.UserRole, m)
+            self.src_rolls_list.addItem(item)
+
+        # Загрузка упаковки
+        targets = self.fetch_data("http://localhost:8000/target-packaging")
+        self.target_rolls_list.clear()
+        for t in targets:
+            item = QListWidgetItem(t["name"])
+            item.setData(Qt.UserRole, t)
+            self.target_rolls_list.addItem(item)
+
+        # Загрузка станков
+        machines = self.fetch_data("http://localhost:8000/machines")
+        self.machine_list.clear()
+        for m in machines:
+            item = QListWidgetItem(m["name"])
+            item.setData(Qt.UserRole, m)
+            self.machine_list.addItem(item)
+
+    def on_select_roll(self):
+        item = self.src_rolls_list.currentItem()
+        if item:
+            self.selected_base_material = item.data(Qt.UserRole)
+
+    def on_select_roll(self):
+        index = self.src_rolls_combo.currentIndex()
+        if index >= 0:
+            self.selected_base_material = self.src_rolls_combo.itemData(index)
+
+
+    def on_select_target(self):
+        item = self.target_rolls_list.currentItem()
+        if item:
+            self.selected_target_packaging = item.data(Qt.UserRole)
+
+    def on_select_machine(self):
+        item = self.machine_list.currentItem()
+        if item:
+            self.selected_machine = item.data(Qt.UserRole)
 
     def fetch_data(self, url, method="GET", json=None):
         try:
@@ -154,4 +193,4 @@ class VisualizationPage(QWidget):
                 print(f"Ошибка запроса: {response.status_code}")
         except Exception as e:
             print(f"Сервер недоступен: {e}")
-        return {}
+        return []

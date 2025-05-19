@@ -1,12 +1,13 @@
+# /backend python -m app.fill_db
 from datetime import datetime, timedelta
 import os
 import sys
 from sqlalchemy.orm import Session
-# /backend python -m app.fill_db
+
 # Добавляем путь для импорта модулей
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import SessionLocal
+from app.database import SessionLocal, Base, engine
 from app.models import (
     BaseMaterial,
     TargetPackaging,
@@ -21,6 +22,9 @@ from app.models import (
 )
 
 def populate_test_data():
+    # Создаем все таблицы
+    Base.metadata.create_all(bind=engine)
+
     db = SessionLocal()
 
     # Очистка всех таблиц
@@ -32,7 +36,7 @@ def populate_test_data():
     db.query(BaseMaterial).delete()
     db.commit()
 
-    # Создаем базовые материалы
+    # 1. Базовые материалы
     materials = [
         BaseMaterial(
             name="Пленка вакуумная 100мкм",
@@ -56,8 +60,10 @@ def populate_test_data():
             package_type=PackagingType.SHRINK
         )
     ]
+    db.add_all(materials)
+    db.commit()
 
-    # Создаем целевую упаковку
+    # 2. Целевая упаковка
     target_packages = [
         TargetPackaging(
             name="Упаковка для сосисок",
@@ -78,8 +84,10 @@ def populate_test_data():
             is_two_streams=False
         )
     ]
+    db.add_all(target_packages)
+    db.commit()
 
-    # Создаем пользователей
+    # 3. Пользователи
     users = [
         User(
             full_name="Иванов Алексей Петрович",
@@ -87,18 +95,19 @@ def populate_test_data():
             role=UserRole.ADMIN
         ),
         User(
-            full_name="Петрова Мария Ивановна",
-            password="manager123",
-            role=UserRole.MANAGER
-        ),
-        User(
             full_name="Сидоров Олег Васильевич",
             password="operator123",
             role=UserRole.OPERATOR
         )
     ]
+    db.add_all(users)
+    db.commit()
 
-    # Создаем станки
+    # Получаем ID пользователей
+    user1_id = users[0].id
+    user2_id = users[1].id
+
+    # 4. Станки
     machines = [
         Machine(
             name="Резчик VECTOR-3000",
@@ -111,49 +120,54 @@ def populate_test_data():
             machine_width=1.8
         )
     ]
-
-    db.add_all(materials + target_packages + users + machines)
+    db.add_all(machines)
     db.commit()
 
-    # Создаем задачи
+    # 5. Задачи
     tasks = [
         Task(
-            base_material_id=1,
-            target_packaging_id=1,
-            user_id=3
+            base_material_id=materials[0].id,
+            target_packaging_id=target_packages[0].id,
+            user_id=user1_id,
+            machine_id=machines[0].id
         ),
         Task(
-            base_material_id=2,
-            target_packaging_id=2,
-            user_id=3
+            base_material_id=materials[1].id,
+            target_packaging_id=target_packages[1].id,
+            user_id=user2_id,
+            machine_id=machines[1].id
         )
     ]
-
     db.add_all(tasks)
     db.commit()
 
-    # Создаем информацию о задачах
+    # Получаем ID задач
+    task1_id = tasks[0].id
+    task2_id = tasks[1].id
+
+    # 6. Информация о задачах
     now = datetime.utcnow()
     task_info = [
         TaskInfo(
-            task_id=1,
+            task_id=task1_id,
             start_time=now - timedelta(hours=2),
-            end_time=now - timedelta(hours=1),
+            end_time=now + timedelta(hours=1),
             status=TaskStatus.COMPLETED,
             material_used=45.3,
             waste=2.7
         ),
         TaskInfo(
-            task_id=2,
+            task_id=task2_id,
             start_time=now,
+            end_time=now + timedelta(hours=4),
             status=TaskStatus.IN_PROGRESS,
             material_used=18.9,
             waste=0.5
         )
     ]
-
     db.add_all(task_info)
     db.commit()
+
     db.close()
     print("Тестовые данные успешно добавлены!")
 

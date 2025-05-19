@@ -79,10 +79,13 @@ class MainPage(QWidget):
         donut1 = self.create_donut_chart(tr('cutting_types'), donut_cutting)
         donut1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         charts_layout.addWidget(donut1)
+
+
         donut2 = self.create_donut_chart(tr('usage_and_waste'), donut_usage)
         donut2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         charts_layout.addWidget(donut2)
-        charts_layout.addStretch()
+
+
         vbox.addLayout(charts_layout)
         return vbox
 
@@ -131,39 +134,60 @@ class MainPage(QWidget):
     def create_bar_chart(self, data):
         labels = data.get("labels", [])
         values = data.get("values", [])
-        fig, ax = plt.subplots(figsize=(3, 2))
-        ax.bar(labels, values, color='skyblue')
+    
+        fig, ax = plt.subplots(figsize=(6, 3.5))  # шире график
+        bars = ax.bar(labels, values, color='#4e79a7')
+
+        # Добавим значения над столбцами
+        for bar in bars:
+            yval = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2.0, yval + 0.5, f'{yval}', ha='center', va='bottom', fontsize=9)
+
         ax.set_ylabel("Кол-во")
+        ax.set_title("Выполнение плана", fontsize=12)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         fig.tight_layout()
+
         canvas = FigureCanvas(fig)
         canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        canvas.setMaximumWidth(400)
+        canvas.setMaximumWidth(600)  # увеличили ширину
         return canvas
 
+
     def create_donut_chart(self, title, data):
-        if "type" in str(data):  # Для donut_cutting
+        if isinstance(data, list) and data and "type" in data[0]:  # Для donut_cutting
             values = [item["percent"] for item in data]
             labels = [item["type"] for item in data]
+            colors = plt.cm.tab20.colors[:len(values)]  # красивые цвета
         else:  # Для donut_usage
             values = [data.get("used_percent", 0), data.get("wasted_percent", 0)]
             labels = ["Использовано", "Отходы"]
-    
-        total = sum(values)
-        fig, ax = plt.subplots(figsize=(2.5, 2.5))
-    
-        if total > 0:
-            ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90,
-                   wedgeprops=dict(width=0.4))
+            colors = ['#1f77b4', '#ff7f0e']
+
+        fig, ax = plt.subplots(figsize=(3, 3))
+
+        if sum(values) > 0:
+            wedges, texts, autotexts = ax.pie(
+                values,
+                labels=labels,
+                autopct='%1.1f%%',
+                startangle=90,
+                colors=colors,
+                wedgeprops=dict(width=0.4)
+            )
+            for text in texts + autotexts:
+                text.set_fontsize(9)
         else:
-            # Заглушка — пустая диаграмма
             ax.text(0.5, 0.5, "Нет данных", horizontalalignment='center',
-                    verticalalignment='center', transform=ax.transAxes)
-            ax.axis('off')  # убрать оси
-    
+                    verticalalignment='center', transform=ax.transAxes, fontsize=10)
+            ax.axis('off')
+
         ax.set_title(title, fontsize=12)
+        ax.axis('equal')
         fig.tight_layout()
+
         canvas = FigureCanvas(fig)
         canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         canvas.setMaximumWidth(300)
         return canvas
-
