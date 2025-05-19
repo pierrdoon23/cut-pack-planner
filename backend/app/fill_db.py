@@ -1,54 +1,161 @@
 from datetime import datetime, timedelta
-import sys
 import os
-
-# Add the parent directory to Python path
+import sys
+from sqlalchemy.orm import Session
+# /backend python -m app.fill_db
+# Добавляем путь для импорта модулей
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal
-from app.models import Roll, CuttingMap, Package, ChartPoint
+from app.models import (
+    BaseMaterial,
+    TargetPackaging,
+    User,
+    Machine,
+    Task,
+    TaskInfo,
+    UserRole,
+    TaskStatus,
+    PackagingType,
+    SeamType
+)
 
-db = SessionLocal()
+def populate_test_data():
+    db = SessionLocal()
 
-# Добавим рулоны с разными типами нарезки, used/wasted и датами
-rolls = [
-    Roll(length=100.0, used=80.0, wasted=20.0, cutting_type="Уголки", created_at=datetime.utcnow() - timedelta(hours=2)),
-    Roll(length=120.0, used=100.0, wasted=20.0, cutting_type="Ленты", created_at=datetime.utcnow() - timedelta(hours=3)),
-    Roll(length=90.0, used=70.0, wasted=20.0, cutting_type="Уголки", created_at=datetime.utcnow() - timedelta(days=1, hours=1)),
-    Roll(length=110.0, used=90.0, wasted=20.0, cutting_type="Ленты", created_at=datetime.utcnow() - timedelta(days=2)),
-    Roll(length=130.0, used=110.0, wasted=20.0, cutting_type="Уголки", created_at=datetime.utcnow() - timedelta(days=3)),
-]
+    # Очистка всех таблиц
+    db.query(TaskInfo).delete()
+    db.query(Task).delete()
+    db.query(Machine).delete()
+    db.query(User).delete()
+    db.query(TargetPackaging).delete()
+    db.query(BaseMaterial).delete()
+    db.commit()
 
-# Добавим карты раскроя с разными датами
-cutting_maps = [
-    CuttingMap(created_at=datetime.utcnow() - timedelta(hours=1)),
-    CuttingMap(created_at=datetime.utcnow() - timedelta(days=1)),
-    CuttingMap(created_at=datetime.utcnow() - timedelta(days=2)),
-]
+    # Создаем базовые материалы
+    materials = [
+        BaseMaterial(
+            name="Пленка вакуумная 100мкм",
+            length=200.0,
+            width=1.5,
+            thickness=100.0,
+            package_type=PackagingType.VACUUM
+        ),
+        BaseMaterial(
+            name="Пленка флоу-пак 80мкм",
+            length=150.0,
+            width=1.2,
+            thickness=80.0,
+            package_type=PackagingType.FLOW_PACK
+        ),
+        BaseMaterial(
+            name="Пленка термоусадочная 120мкм",
+            length=180.0,
+            width=1.8,
+            thickness=120.0,
+            package_type=PackagingType.SHRINK
+        )
+    ]
 
-# Добавим пакеты с разными датами
-packages = [
-    Package(created_at=datetime.utcnow() - timedelta(hours=1)),
-    Package(created_at=datetime.utcnow() - timedelta(days=1)),
-    Package(created_at=datetime.utcnow() - timedelta(days=2)),
-]
+    # Создаем целевую упаковку
+    target_packages = [
+        TargetPackaging(
+            name="Упаковка для сосисок",
+            purpose="Упаковка сосисок премиум класса",
+            length=0.3,
+            width=0.2,
+            package_type=PackagingType.VACUUM,
+            seam_type=SeamType.DOUBLE_SEAM,
+            is_two_streams=True
+        ),
+        TargetPackaging(
+            name="Упаковка для колбас",
+            purpose="Упаковка сырокопченых колбас",
+            length=0.5,
+            width=0.3,
+            package_type=PackagingType.FLOW_PACK,
+            seam_type=SeamType.ULTRASONIC,
+            is_two_streams=False
+        )
+    ]
 
-# Добавим данные для барчарта
-chart_points = [
-    ChartPoint(label="Понедельник", value=5),
-    ChartPoint(label="Вторник", value=8),
-    ChartPoint(label="Среда", value=12),
-    ChartPoint(label="Четверг", value=7),
-    ChartPoint(label="Пятница", value=15),
-    ChartPoint(label="Суббота", value=3),
-    ChartPoint(label="Воскресенье", value=2),
-]
+    # Создаем пользователей
+    users = [
+        User(
+            full_name="Иванов Алексей Петрович",
+            password="admin123",
+            role=UserRole.ADMIN
+        ),
+        User(
+            full_name="Петрова Мария Ивановна",
+            password="manager123",
+            role=UserRole.MANAGER
+        ),
+        User(
+            full_name="Сидоров Олег Васильевич",
+            password="operator123",
+            role=UserRole.OPERATOR
+        )
+    ]
 
-db.add_all(rolls)
-db.add_all(cutting_maps)
-db.add_all(packages)
-db.add_all(chart_points)
-db.commit()
-db.close()
+    # Создаем станки
+    machines = [
+        Machine(
+            name="Резчик VECTOR-3000",
+            cutting_speed=15.5,
+            machine_width=2.0
+        ),
+        Machine(
+            name="Автомат FPM-200",
+            cutting_speed=20.0,
+            machine_width=1.8
+        )
+    ]
 
-print("Данные успешно добавлены!")
+    db.add_all(materials + target_packages + users + machines)
+    db.commit()
+
+    # Создаем задачи
+    tasks = [
+        Task(
+            base_material_id=1,
+            target_packaging_id=1,
+            user_id=3
+        ),
+        Task(
+            base_material_id=2,
+            target_packaging_id=2,
+            user_id=3
+        )
+    ]
+
+    db.add_all(tasks)
+    db.commit()
+
+    # Создаем информацию о задачах
+    now = datetime.utcnow()
+    task_info = [
+        TaskInfo(
+            task_id=1,
+            start_time=now - timedelta(hours=2),
+            end_time=now - timedelta(hours=1),
+            status=TaskStatus.COMPLETED,
+            material_used=45.3,
+            waste=2.7
+        ),
+        TaskInfo(
+            task_id=2,
+            start_time=now,
+            status=TaskStatus.IN_PROGRESS,
+            material_used=18.9,
+            waste=0.5
+        )
+    ]
+
+    db.add_all(task_info)
+    db.commit()
+    db.close()
+    print("Тестовые данные успешно добавлены!")
+
+if __name__ == "__main__":
+    populate_test_data()

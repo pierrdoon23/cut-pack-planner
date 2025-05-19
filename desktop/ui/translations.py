@@ -26,6 +26,7 @@ translations = {
         'port': "Порт",
         'report': "📊 Отчет",
         'report_text': "Здесь вы можете увидеть подробный отчет об операциях.",
+        'load_maps': 'Загрузить карты',
     },
     'en': {
         'statistics': "\U0001F4CA Main Page",
@@ -52,7 +53,9 @@ translations = {
         'api_url': "API URL",
         'port': "Port",
         'report': "📊 Report",
-        'report_text': "Here you can see a detailed report of operations."
+        'report_text': "Here you can see a detailed report of operations.",
+        'load_maps': 'Load Cards',
+
     }
 }
 

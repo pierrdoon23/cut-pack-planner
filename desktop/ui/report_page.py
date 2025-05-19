@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QComboBox, QLabel, QTableWidget, QTableWidgetItem
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QComboBox, QLabel, QTableWidget, QTableWidgetItem, QSizePolicy, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -11,20 +11,32 @@ class ReportPage(QWidget):
         super().__init__()
         self.tasks = []
         self.init_ui()
+        self.setMaximumWidth(1200)
+        self.setMinimumWidth(600)
 
     def init_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         layout.addWidget(CommonWidgets.build_header(tr('report')))
+        # Контент на всю ширину
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(20, 10, 20, 10)
+        content_layout.setSpacing(20)
         self.header = QLabel(tr("report_text"))
+        self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.view_selector = QComboBox()
+        self.view_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.view_selector.addItems(["📋 Таблица", "📈 Диаграмма Ганта"])
         self.view_selector.currentIndexChanged.connect(self.update_view)
 
-        layout.addWidget(self.header)
-        layout.addWidget(self.view_selector)
+        content_layout.addWidget(self.header)
+        content_layout.addWidget(self.view_selector)
 
         self.view_area = QVBoxLayout()
-        layout.addLayout(self.view_area)
+        content_layout.addLayout(self.view_area)
+        content_layout.addStretch()
+        layout.addLayout(content_layout)
         layout.addWidget(CommonWidgets.build_footer())
 
         self.update_view()
@@ -45,6 +57,8 @@ class ReportPage(QWidget):
     def show_table(self):
         table = QTableWidget(0, 4)
         table.setHorizontalHeaderLabels(["ID", "Название", "Начало", "Конец"])
+        table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        table.setMaximumWidth(1000)
         self.view_area.addWidget(table)
 
     def show_gantt(self):
@@ -54,4 +68,6 @@ class ReportPage(QWidget):
         ax.grid(True)
         fig.autofmt_xdate()
         canvas = FigureCanvas(fig)
+        canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        canvas.setMaximumWidth(1000)
         self.view_area.addWidget(canvas)

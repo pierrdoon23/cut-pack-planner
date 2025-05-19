@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date
 from app import models
 from datetime import datetime, timedelta
+from app.schemas import OptimizationRollSchema
 
 # Количество и динамика за 24ч
 
@@ -50,4 +51,62 @@ def get_usage_waste_data(db: Session):
     return {
         "used_percent": round(used / total * 100, 1),
         "wasted_percent": round(wasted / total * 100, 1)
+    }
+
+# ----visual/карты 
+# Source/Target rolls для раскроя
+
+def add_roll(db: Session, roll: OptimizationRollSchema, roll_type: str):
+    new_roll = models.Roll(
+        length=roll.length,
+        used=0,
+        wasted=0,
+        cutting_type=roll_type,
+        created_at=datetime.utcnow()
+    )
+    db.add(new_roll)
+    db.commit()
+    db.refresh(new_roll)
+    return new_roll
+
+def get_rolls_by_type(db: Session, roll_type: str):
+    return db.query(models.Roll).filter(models.Roll.cutting_type == roll_type).all()
+
+def run_cutting_optimization(db: Session):
+    sources = get_rolls_by_type(db, "source")
+    targets = get_rolls_by_type(db, "target")
+
+    if not sources or not targets:
+        return {"efficiency": 0.0, "waste": 0.0}
+
+    # Сортировка по убыванию
+    sources = sorted(sources, key=lambda r: r.length, reverse=True)
+    targets = sorted(targets, key=lambda r: r.length, reverse=True)
+
+    # Преобразуем источники в список остатка
+    source_lengths = [r.length for r in sources]
+    waste_total = 0
+    used_total = 0
+
+    for target in targets:
+        placed = False
+        for i in range(len(source_lengths)):
+            if source_lengths[i] >= target.length:
+                source_lengths[i] -= target.length
+                used_total += target.length
+                placed = True
+                break
+        if not placed:
+            # Если никуда не влезает — считаем "отказ"
+            waste_total += target.length
+
+    # Остатки — отходы
+    waste_total += sum(source_lengths)
+
+    total_input = sum(r.length for r in sources)
+    efficiency = used_total / total_input if total_input > 0 else 0.0
+
+    return {
+        "efficiency": round(efficiency * 100, 2),
+        "waste": round(waste_total, 2)
     }

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import requests
@@ -10,12 +10,32 @@ class MainPage(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         layout.addWidget(CommonWidgets.build_header(tr('statistics')))
-        layout.addLayout(self.build_content())
+
+        # Центрируем контент
+        content_wrapper = QWidget()
+        content_layout = QVBoxLayout(content_wrapper)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        content_layout.addLayout(self.build_content())
+        content_wrapper.setMaximumWidth(1200)
+        content_wrapper.setMinimumWidth(600)
+
+        center_hbox = QHBoxLayout()
+        center_hbox.setContentsMargins(0, 0, 0, 0)
+        center_hbox.addStretch()
+        center_hbox.addWidget(content_wrapper)
+        center_hbox.addStretch()
+        layout.addLayout(center_hbox)
+
         layout.addWidget(CommonWidgets.build_footer())
 
     def build_content(self):
         vbox = QVBoxLayout()
+        vbox.setContentsMargins(20, 10, 20, 10)
+        vbox.setSpacing(20)
 
         # --- Загрузка всех данных с API ---
         rolls_count = self.fetch_data("http://localhost:8000/rolls_count")
@@ -27,6 +47,7 @@ class MainPage(QWidget):
 
         # --- Статистические карточки ---
         cards_layout = QHBoxLayout()
+        cards_layout.setSpacing(20)
         
         # Формируем статистику из полученных данных
         stats = [
@@ -37,23 +58,31 @@ class MainPage(QWidget):
         
         for stat in stats:
             self.add_stat_card(cards_layout, tr(stat['name']), str(stat['value']), stat['change'])
+        cards_layout.addStretch()
         vbox.addLayout(cards_layout)
 
         # --- Графики ---
         charts_layout = QHBoxLayout()
+        charts_layout.setSpacing(20)
 
         # Гистограмма
         bar_chart_layout = QVBoxLayout()
         title = QLabel(tr('plan_completion'))
         title.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 5px;")
         bar_chart_layout.addWidget(title)
-        bar_chart_layout.addWidget(self.create_bar_chart(bar_data))
+        bar_chart = self.create_bar_chart(bar_data)
+        bar_chart.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        bar_chart_layout.addWidget(bar_chart)
         charts_layout.addLayout(bar_chart_layout)
 
         # Кольцевые диаграммы
-        charts_layout.addWidget(self.create_donut_chart(tr('cutting_types'), donut_cutting))
-        charts_layout.addWidget(self.create_donut_chart(tr('usage_and_waste'), donut_usage))
-
+        donut1 = self.create_donut_chart(tr('cutting_types'), donut_cutting)
+        donut1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        charts_layout.addWidget(donut1)
+        donut2 = self.create_donut_chart(tr('usage_and_waste'), donut_usage)
+        donut2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        charts_layout.addWidget(donut2)
+        charts_layout.addStretch()
         vbox.addLayout(charts_layout)
         return vbox
 
@@ -83,22 +112,20 @@ class MainPage(QWidget):
 
     def add_stat_card(self, layout, title, value, subtitle):
         card = QVBoxLayout()
-
         label_title = QLabel(title)
         label_title.setStyleSheet("font-size: 14px; font-weight: bold;")
         card.addWidget(label_title)
-
         val = QLabel(value)
         val.setStyleSheet("font-size: 26px; font-weight: bold; color: #333333;")
         card.addWidget(val)
-
         sub = QLabel(subtitle)
         sub.setStyleSheet("color: gray; font-size: 12px;")
         card.addWidget(sub)
-
         w = QWidget()
         w.setLayout(card)
         w.setStyleSheet("background: #f5f5f5; border-radius: 10px; padding: 10px;")
+        w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        w.setMaximumWidth(300)
         layout.addWidget(w)
 
     def create_bar_chart(self, data):
@@ -108,7 +135,10 @@ class MainPage(QWidget):
         ax.bar(labels, values, color='skyblue')
         ax.set_ylabel("Кол-во")
         fig.tight_layout()
-        return FigureCanvas(fig)
+        canvas = FigureCanvas(fig)
+        canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        canvas.setMaximumWidth(400)
+        return canvas
 
     def create_donut_chart(self, title, data):
         if "type" in str(data):  # Для donut_cutting
@@ -117,10 +147,23 @@ class MainPage(QWidget):
         else:  # Для donut_usage
             values = [data.get("used_percent", 0), data.get("wasted_percent", 0)]
             labels = ["Использовано", "Отходы"]
-
+    
+        total = sum(values)
         fig, ax = plt.subplots(figsize=(2.5, 2.5))
-        ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90,
-               wedgeprops=dict(width=0.4))
+    
+        if total > 0:
+            ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90,
+                   wedgeprops=dict(width=0.4))
+        else:
+            # Заглушка — пустая диаграмма
+            ax.text(0.5, 0.5, "Нет данных", horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
+            ax.axis('off')  # убрать оси
+    
         ax.set_title(title, fontsize=12)
         fig.tight_layout()
-        return FigureCanvas(fig)
+        canvas = FigureCanvas(fig)
+        canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        canvas.setMaximumWidth(300)
+        return canvas
+

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QStatusBar, QWidget, QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QStyle
+from PyQt5.QtWidgets import QApplication, QMainWindow, QStatusBar, QWidget, QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QStyle, QDesktopWidget
 import sys
 from .main_page import MainPage
 from .visualization_page import VisualizationPage
@@ -13,20 +13,39 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Оптимизация раскроя")
-        self.setGeometry(100, 100, 1000, 700)
+        
+        # Get screen dimensions
+        screen = QDesktopWidget().screenGeometry()
+        # self.setGeometry(0, 0, screen.width(), screen.height())
+        # Make window fullscreen
+        self.showMaximized()
 
         self.central = QWidget()
         self.setCentralWidget(self.central)
         layout = QHBoxLayout(self.central)
+        # layout.setContentsMargins(10, 10, 10, 10)  # Add some padding
+        layout.setContentsMargins(0, 0, 0, 0)  # Убираем padding
+        layout.setSpacing(0)
 
         self.navbar = QVBoxLayout()
         navbar_widget = QFrame()
         navbar_widget.setObjectName("Navbar")
         navbar_widget.setLayout(self.navbar)
+        navbar_widget.setFixedWidth(200)  # Fixed width for navbar
         layout.addWidget(navbar_widget, 0)
 
+        # Центральная часть как отдельный QFrame
+        self.central_frame = QFrame()
+        self.central_frame.setObjectName("CentralFrame")
+        self.central_layout = QVBoxLayout(self.central_frame)
+        self.central_layout.setContentsMargins(0, 0, 0, 0)
+        self.central_layout.setSpacing(0)
+        layout.addWidget(self.central_frame, 1)
+
+        # Stack теперь внутри центрального layout
         self.stack = QStackedWidget()
-        layout.addWidget(self.stack, 1)
+        # layout.addWidget(self.stack, 1)
+        self.central_layout.addWidget(self.stack)
 
         self.buttons = []
         self.stats_page = MainPage()
@@ -47,7 +66,6 @@ class MainWindow(QMainWindow):
         self.buttons.append(NavButton(tr('packages'), self.style().standardIcon(QStyle.SP_FileDialogDetailedView), lambda: self.stack.setCurrentWidget(self.packages_page), self.buttons))
         self.buttons.append(NavButton(tr('report'), self.style().standardIcon(QStyle.SP_FileDialogContentsView), lambda: self.stack.setCurrentWidget(self.report_page), self.buttons))
         self.buttons.append(NavButton(tr('settings'), self.style().standardIcon(QStyle.SP_DialogHelpButton), lambda: self.stack.setCurrentWidget(self.settings_page), self.buttons))
-
 
         for btn in self.buttons:
             self.navbar.addWidget(btn)
