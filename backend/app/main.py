@@ -17,3 +17,4 @@ app.add_middleware(
 
 app.include_router(main_router)
 app.include_router(optimization_router)
+

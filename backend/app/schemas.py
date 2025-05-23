@@ -1,7 +1,8 @@
 from datetime import datetime
+import packaging
 from pydantic import BaseModel
 from typing import Optional
-from app.models import PackagingType, SeamType, TaskStatus, UserRole
+from app.models import BaseMaterial, Machine, PackagingType, SeamType, TaskStatus, User, UserRole
 
 # Схемы для основных сущностей
 class BaseMaterialSchema(BaseModel):
@@ -99,9 +100,25 @@ class TaskCreate(BaseModel):
     base_material_id: int
     target_packaging_id: int
     user_id: int
+    machine_id: int
+    status: TaskStatus = TaskStatus.PLANNED
+    start_time: Optional[datetime] = None
 
 class TaskInfoCreate(BaseModel):
     task_id: int
     status: TaskStatus = TaskStatus.PLANNED
     material_used: float
     waste: float
+
+class Task(BaseModel):
+    id: int
+    base_material: BaseMaterial
+    target_packaging: TargetPackagingSchema
+    user: User
+    machine: Machine
+    start_time: datetime
+    status: str
+
+    class Config:
+        from_attributes = True
+        arbitrary_types_allowed = True

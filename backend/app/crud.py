@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.models import Task, TaskInfo, BaseMaterial, TargetPackaging
+from app.models import Task, TaskInfo, BaseMaterial, TargetPackaging, TaskStatus
 from app import schemas
 from app import models
 
@@ -11,7 +11,7 @@ def get_rolls_count(db: Session):
     last_24h = db.query(BaseMaterial).filter(BaseMaterial.id != None,  # для наглядности
         BaseMaterial.id.in_(
             db.query(Task.base_material_id).join(TaskInfo)
-            .filter(TaskInfo.start_time >= datetime.utcnow() - timedelta(hours=24))
+            .filter(TaskInfo.start_time >= datetime.UTC() - timedelta(hours=24))
         )
     ).count()
     return {"total": total, "last_24h": last_24h}
@@ -20,7 +20,7 @@ def get_rolls_count(db: Session):
 def get_cutting_maps_count(db: Session):
     total = db.query(Task).count()
     last_24h = db.query(Task).join(TaskInfo)\
-        .filter(TaskInfo.start_time >= datetime.utcnow() - timedelta(hours=24))\
+        .filter(TaskInfo.start_time >= datetime.UTC() - timedelta(hours=24))\
         .count()
     return {"total": total, "last_24h": last_24h}
 
@@ -30,7 +30,7 @@ def get_packages_count(db: Session):
     last_24h = db.query(TargetPackaging).filter(
         TargetPackaging.id.in_(
             db.query(Task.target_packaging_id).join(TaskInfo)
-            .filter(TaskInfo.start_time >= datetime.utcnow() - timedelta(hours=24))
+            .filter(TaskInfo.start_time >= datetime.UTC() - timedelta(hours=24))
         )
     ).count()
     return {"total": total, "last_24h": last_24h}
@@ -38,7 +38,7 @@ def get_packages_count(db: Session):
 # 4. График заказов за неделю
 def get_weekly_bar_chart(db: Session):
     labels = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-    today = datetime.utcnow()
+    today = datetime.UTC()
     start_of_week = today - timedelta(days=today.weekday())
     
     values = []
@@ -79,16 +79,42 @@ def get_material_usage_donut(db: Session):
 #----------------------визуал картыв
 
 def create_task(db: Session, task: schemas.TaskCreate):
-    db_task = models.Task(
-        base_material_id=task.base_material_id,
-        target_packaging_id=task.target_packaging_id,
-        user_id=task.user_id,
-        machine_id=task.machine_id  # <== добавили
-    )
+    db_task = models.Task(**task.dict())
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
     return db_task
 
+def get_all_tasks(db: Session):
+    return db.query(models.Task).all()
+
+def get_task_info(db: Session):
+    tasks = db.query(models.Task).all()
+    return [
+        {
+            "task_id": task.id,
+            "status": task.status,
+            "start_time": task.start_time
+        } for task in tasks
+    ]
+
+def get_base_materials(db: Session):
+    return db.query(models.BaseMaterial).all()
+
+def get_cutting_maps(db: Session):
+    return db.query(models.Task).all()
+
+def get_target_packaging(db: Session):
+    return db.query(models.TargetPackaging).all()
+
 def get_machines(db: Session):
     return db.query(models.Machine).all()
+
+def update_task_status(db: Session, task_id: int, status: TaskStatus):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise Exception("Задача не найдена")
+    task.status = status
+    db.commit()
+    db.refresh(task)
+    return task

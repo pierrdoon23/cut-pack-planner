@@ -70,6 +70,8 @@ class Task(Base):
     target_packaging_id = Column(Integer, ForeignKey("target_packaging.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
     machine_id = Column(Integer, ForeignKey("machines.id"))
+    status = Column(SQLAlchemyEnum(TaskStatus), default=TaskStatus.PLANNED)
+    start_time = Column(DateTime, default=datetime.utcnow)
 
     base_material = relationship("BaseMaterial")
     target_packaging = relationship("TargetPackaging")
