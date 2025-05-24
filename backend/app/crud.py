@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models import Task, TaskInfo, BaseMaterial, TargetPackaging, TaskStatus
@@ -8,19 +8,21 @@ from app import models
 # 1. Подсчет рулонов
 def get_rolls_count(db: Session):
     total = db.query(BaseMaterial).count()
-    last_24h = db.query(BaseMaterial).filter(BaseMaterial.id != None,  # для наглядности
+    last_24h = db.query(BaseMaterial).filter(
+        BaseMaterial.id != None,
         BaseMaterial.id.in_(
             db.query(Task.base_material_id).join(TaskInfo)
-            .filter(TaskInfo.start_time >= datetime.UTC() - timedelta(hours=24))
+            .filter(TaskInfo.start_time >= datetime.now(timezone.utc) - timedelta(hours=24))
         )
     ).count()
     return {"total": total, "last_24h": last_24h}
+
 
 # 2. Подсчет карт раскроя (Tasks)
 def get_cutting_maps_count(db: Session):
     total = db.query(Task).count()
     last_24h = db.query(Task).join(TaskInfo)\
-        .filter(TaskInfo.start_time >= datetime.UTC() - timedelta(hours=24))\
+        .filter(TaskInfo.start_time >= datetime.now(timezone.utc) - timedelta(hours=24))\
         .count()
     return {"total": total, "last_24h": last_24h}
 
@@ -30,7 +32,7 @@ def get_packages_count(db: Session):
     last_24h = db.query(TargetPackaging).filter(
         TargetPackaging.id.in_(
             db.query(Task.target_packaging_id).join(TaskInfo)
-            .filter(TaskInfo.start_time >= datetime.UTC() - timedelta(hours=24))
+            .filter(TaskInfo.start_time >= datetime.now(timezone.utc) - timedelta(hours=24))
         )
     ).count()
     return {"total": total, "last_24h": last_24h}
@@ -38,7 +40,7 @@ def get_packages_count(db: Session):
 # 4. График заказов за неделю
 def get_weekly_bar_chart(db: Session):
     labels = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-    today = datetime.UTC()
+    today = datetime.now(timezone.utc)
     start_of_week = today - timedelta(days=today.weekday())
     
     values = []

@@ -38,12 +38,12 @@ class MainPage(QWidget):
         vbox.setSpacing(20)
 
         # --- Загрузка всех данных с API ---
-        rolls_count = self.fetch_data("http://localhost:8000/rolls_count")
-        cutting_maps_count = self.fetch_data("http://localhost:8000/cutting_maps_count")
-        packages_count = self.fetch_data("http://localhost:8000/packages_count")
-        bar_data = self.fetch_data("http://localhost:8000/bar_chart")
-        donut_cutting = self.fetch_data("http://localhost:8000/donut_cutting")
-        donut_usage = self.fetch_data("http://localhost:8000/donut_usage")
+        rolls_count = self.fetch_data("http://localhost:8000/mainpage/rolls_count")
+        cutting_maps_count = self.fetch_data("http://localhost:8000/mainpage/cutting_maps_count")
+        packages_count = self.fetch_data("http://localhost:8000/mainpage/packages_count")
+        bar_data = self.fetch_data("http://localhost:8000/mainpage/bar_chart")
+        donut_cutting = self.fetch_data("http://localhost:8000/mainpage/donut_cutting")
+        donut_usage = self.fetch_data("http://localhost:8000/mainpage/donut_usage")
 
         # --- Статистические карточки ---
         cards_layout = QHBoxLayout()

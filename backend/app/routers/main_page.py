@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app import crud, database
 
-router = APIRouter()
+router = APIRouter(prefix="/mainpage", tags=["MainPage"])
 
 @router.get("/rolls_count", tags=["MainPage"])
 def get_rolls_count(db: Session = Depends(database.get_db)):
