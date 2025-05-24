@@ -87,12 +87,18 @@ class VisualizationPage(QWidget):
                 response = requests.post(url, json=json, timeout=2)
             else:
                 response = requests.get(url, timeout=2)
-            if response.status_code == 200:
-                return response.json()
-            print(f"Ошибка запроса: {response.status_code}")
+
+            if response.status_code in [200, 201]:
+                # Попробуем вернуть JSON, если есть, иначе просто True
+                try:
+                    return response.json()
+                except ValueError:
+                    return True  # нет тела, но запрос успешный
+            print(f"Ошибка запроса: {response.status_code} — {response.text}")
         except Exception as e:
             print(f"Ошибка запроса: {e}")
-        return []
+        return None
+
 
     def load_selection_lists(self):
         self.src_rolls_combo.clear()

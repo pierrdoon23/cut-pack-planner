@@ -112,12 +112,12 @@ class TaskInfoCreate(BaseModel):
 
 class Task(BaseModel):
     id: int
-    base_material: BaseMaterial
+    base_material: BaseMaterialSchema
     target_packaging: TargetPackagingSchema
-    user: User
-    machine: Machine
+    user: UserSchema
+    machine: MachineSchema
     start_time: datetime
-    status: str
+    status: TaskStatus
 
     class Config:
         from_attributes = True
