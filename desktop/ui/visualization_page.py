@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox,
-    QScrollArea, QMessageBox, QFrame
+    QScrollArea, QMessageBox, QFrame, QGraphicsDropShadowEffect
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QColor
 from ui.translations import tr
 from ui.widgets import CommonWidgets
 import requests
@@ -89,11 +89,10 @@ class VisualizationPage(QWidget):
                 response = requests.get(url, timeout=2)
 
             if response.status_code in [200, 201]:
-                # Попробуем вернуть JSON, если есть, иначе просто True
                 try:
                     return response.json()
                 except ValueError:
-                    return True  # нет тела, но запрос успешный
+                    return True
             print(f"Ошибка запроса: {response.status_code} — {response.text}")
         except Exception as e:
             print(f"Ошибка запроса: {e}")
@@ -166,24 +165,42 @@ class VisualizationPage(QWidget):
 
     def build_card(self, task):
         card = QFrame()
+
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(15)
+        shadow.setXOffset(0)
+        shadow.setYOffset(4)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        card.setGraphicsEffect(shadow)
+    
         card.setFrameShape(QFrame.StyledPanel)
         card.setStyleSheet("""
             QFrame {
-                background-color: #f0f0f0;
-                border-radius: 10px;
-                padding: 12px;
-                border: 1px solid #ccc;
+                background-color: #ffffff;
+                border-radius: 20px;
+                margin: 3px;
+                border: 1px solid black;
+                        
             }
         """)
         layout = QVBoxLayout(card)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
 
         def line(label, value):
             lbl = QLabel(f"<b>{label}:</b> {value}")
-            lbl.setFont(QFont("Arial", 10))
+            lbl.setFont(QFont("Arial", 16))
             return lbl
 
         layout.addWidget(line("🆔 Задача ID", task.get("task_id", "N/A")))
+        layout.addWidget(line("👤 Пользователь", task["user"]["name"]))
+        layout.addWidget(line("🔧 Станок", task["machine"]["name"]))
+        layout.addWidget(line("📦 Упаковка", f'{task["target_packaging"]["name"]} ({task["target_packaging"]["seam_type"]})'))
+        layout.addWidget(line("📄 Рулон", f'{task["base_material"]["name"]} — {task["base_material"]["width"]}м x {task["base_material"]["length"]}м'))
         layout.addWidget(line("📌 Статус", task.get("status", "N/A")))
         layout.addWidget(line("📅 Начало", task.get("start_time", "N/A")))
+        layout.addWidget(line("📅 Примерное завершение", task.get("end_time", "—")))
+        layout.addWidget(line("✅ Использовано материала", f'{task.get("material_used", 0)} м'))
+        layout.addWidget(line("❌ Отходы", f'{task.get("waste", 0)} м'))
 
         return card

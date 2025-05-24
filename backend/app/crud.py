@@ -90,13 +90,43 @@ def get_all_tasks(db: Session):
 
 def get_task_info(db: Session):
     tasks = db.query(models.Task).all()
-    return [
-        {
+    result = []
+    for task in tasks:
+        task_info = db.query(models.TaskInfo).filter(models.TaskInfo.task_id == task.id).first()
+        result.append({
             "task_id": task.id,
             "status": task.status,
-            "start_time": task.start_time
-        } for task in tasks
-    ]
+            "start_time": task.start_time,
+            "end_time": task_info.end_time if task_info else None,
+            "material_used": float(task_info.material_used) if task_info else None,
+            "waste": float(task_info.waste) if task_info else None,
+            "base_material": {
+                "name": task.base_material.name,
+                "length": task.base_material.length,
+                "width": task.base_material.width,
+                "thickness": task.base_material.thickness,
+                "package_type": task.base_material.package_type
+            },
+            "target_packaging": {
+                "name": task.target_packaging.name,
+                "purpose": task.target_packaging.purpose,
+                "length": task.target_packaging.length,
+                "width": task.target_packaging.width,
+                "package_type": task.target_packaging.package_type,
+                "seam_type": task.target_packaging.seam_type,
+                "is_two_streams": task.target_packaging.is_two_streams
+            },
+            "machine": {
+                "name": task.machine.name,
+                "cutting_speed": task.machine.cutting_speed,
+                "machine_width": task.machine.machine_width
+            },
+            "user": {
+                "name": task.user.full_name,
+                "role": task.user.role
+            }
+        })
+    return result
 
 def get_base_materials(db: Session):
     return db.query(models.BaseMaterial).all()
