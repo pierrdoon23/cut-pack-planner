@@ -42,14 +42,8 @@ class VisualizationPage(QWidget):
         vbox.setSpacing(15)
         vbox.setContentsMargins(10, 10, 10, 10)
 
-        self.result_label = QLabel(tr('result'))
-        self.result_label.setStyleSheet("margin-bottom: 20px; font-weight: bold; font-size: 16px;")
-        vbox.addWidget(self.result_label)
-
-        vbox.addWidget(QLabel(tr('subtitle')))
-
         hbox = QHBoxLayout()
-        hbox.setSpacing(10)
+        hbox.setSpacing(40)
 
         hbox.addWidget(QLabel(tr('src_rolls')))
         self.src_rolls_combo = QComboBox()
