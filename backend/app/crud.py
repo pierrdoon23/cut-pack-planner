@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models import Task, TaskInfo, BaseMaterial, TargetPackaging, TaskStatus
@@ -86,6 +87,49 @@ def create_task(db: Session, task: schemas.TaskCreate):
     db.commit()
     db.refresh(db_task)
     return db_task
+
+def create_task_info_with_calculation(db: Session, task_id: int, required_pieces: int):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+
+    base = task.base_material
+    target = task.target_packaging
+    machine = task.machine
+
+    # Расчеты
+    required_total_length = target.length * required_pieces
+    streams = 2 if target.is_two_streams else 1
+    per_stream_width = target.width * streams
+
+    if per_stream_width > machine.machine_width:
+        raise HTTPException(status_code=400, detail="Ширина не влезает в машину")
+
+    material_used = required_total_length
+    waste = material_used * 0.02
+    material_left = base.length - material_used - waste
+    cutting_time_minutes = material_used / machine.cutting_speed
+    end_time = datetime.utcnow() + timedelta(minutes=cutting_time_minutes)
+
+    task_info = models.TaskInfo(
+        task_id=task.id,
+        start_time=datetime.utcnow(),
+        end_time=end_time,
+        material_used=round(material_used, 2),
+        waste=round(waste, 2),
+        status=TaskStatus.PLANNED,
+    )
+
+    db.add(task_info)
+    db.commit()
+    db.refresh(task_info)
+
+    return {
+        "task_info": task_info,
+        "material_left": round(material_left, 2),
+        "cutting_time_minutes": round(cutting_time_minutes, 2),
+        "total_target_length": round(required_total_length, 2),
+    }
 
 def get_all_tasks(db: Session):
     return db.query(models.Task).all()
@@ -187,3 +231,18 @@ def create_task_info(db: Session, info: schemas.TaskInfoCreate):
     db.commit()
     db.refresh(db_info)
     return db_info
+
+def get_task_report_data(db: Session):
+    tasks = db.query(models.Task).outerjoin(models.TaskInfo).all()
+    result = []
+
+    for task in tasks:
+        task_info = db.query(models.TaskInfo).filter(models.TaskInfo.task_id == task.id).first()
+        result.append({
+            "id": task.id,
+            "name": f"Задача {task.id}",
+            "start_time": task_info.start_time if task_info else None,
+            "end_time": task_info.end_time if task_info else None
+        })
+
+    return result

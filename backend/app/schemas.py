@@ -1,7 +1,7 @@
 from datetime import datetime
 import packaging
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, Any
 from app.models import BaseMaterial, Machine, PackagingType, SeamType, TaskStatus, User, UserRole
 
 # Схемы для основных сущностей
@@ -122,3 +122,49 @@ class Task(BaseModel):
     class Config:
         from_attributes = True
         arbitrary_types_allowed = True
+
+class TaskReportSchema(BaseModel):
+    id: int
+    name: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True
+
+# Новые схемы для создания задачи с расчетом
+class TaskCreateWithPieces(BaseModel):
+    base_material_id: int
+    target_packaging_id: int
+    machine_id: int
+    user_id: int
+    required_pieces: int
+    start_time: Optional[datetime] = None
+
+class TaskResponse(BaseModel):
+    id: int
+    base_material_id: int
+    target_packaging_id: int
+    machine_id: int
+    user_id: int
+    start_time: datetime
+    status: TaskStatus
+
+    class Config:
+        from_attributes = True
+
+class CalculationResponse(BaseModel):
+    task_info: TaskInfoSchema
+    material_left: float
+    cutting_time_minutes: float
+    total_target_length: float
+
+    class Config:
+        from_attributes = True
+
+class CreateTaskResponse(BaseModel):
+    task: TaskResponse
+    calculation: CalculationResponse
+
+    class Config:
+        from_attributes = True

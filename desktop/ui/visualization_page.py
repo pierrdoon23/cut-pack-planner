@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QComboBox,
-    QScrollArea, QMessageBox, QFrame, QGraphicsDropShadowEffect
+    QScrollArea, QMessageBox, QFrame, QGraphicsDropShadowEffect, QSpinBox
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QColor
@@ -37,6 +37,9 @@ class VisualizationPage(QWidget):
         layout.addWidget(scroll)
         layout.addWidget(CommonWidgets.build_footer())
 
+        # Load data at initialization
+        self.refresh_data()
+
     def build_content(self):
         vbox = QVBoxLayout()
         vbox.setSpacing(15)
@@ -62,6 +65,17 @@ class VisualizationPage(QWidget):
 
         vbox.addLayout(hbox)
 
+        # Добавляем поле для ввода количества штук
+        pieces_hbox = QHBoxLayout()
+        pieces_hbox.addWidget(QLabel("Количество штук:"))
+        self.pieces_spin = QSpinBox()
+        self.pieces_spin.setMinimum(1)
+        self.pieces_spin.setMaximum(10000)
+        self.pieces_spin.setValue(1)
+        pieces_hbox.addWidget(self.pieces_spin)
+        pieces_hbox.addStretch()
+        vbox.addLayout(pieces_hbox)
+
         create_btn = QPushButton(tr('create'))
         create_btn.setMaximumWidth(200)
         create_btn.clicked.connect(self.on_create_task)
@@ -70,10 +84,12 @@ class VisualizationPage(QWidget):
         self.cards_container = QVBoxLayout()
         vbox.addLayout(self.cards_container)
 
+        return vbox
+
+    def refresh_data(self):
+        """Обновляет все данные на странице"""
         self.load_selection_lists()
         self.on_load_maps()
-
-        return vbox
 
     def fetch_data(self, url, method="GET", json=None):
         try:
@@ -92,22 +108,24 @@ class VisualizationPage(QWidget):
             print(f"Ошибка запроса: {e}")
         return None
 
-
     def load_selection_lists(self):
         self.src_rolls_combo.clear()
         self.src_materials = self.fetch_data("http://localhost:8000/tasks/base-materials")
-        for mat in self.src_materials:
-            self.src_rolls_combo.addItem(mat["name"], mat)
+        if self.src_materials:
+            for mat in self.src_materials:
+                self.src_rolls_combo.addItem(mat["name"], mat)
 
         self.target_rolls_combo.clear()
         self.target_packaging = self.fetch_data("http://localhost:8000/tasks/target-packaging")
-        for pack in self.target_packaging:
-            self.target_rolls_combo.addItem(pack["name"], pack)
+        if self.target_packaging:
+            for pack in self.target_packaging:
+                self.target_rolls_combo.addItem(pack["name"], pack)
 
         self.machine_combo.clear()
         self.machines = self.fetch_data("http://localhost:8000/tasks/machines")
-        for machine in self.machines:
-            self.machine_combo.addItem(machine["name"], machine)
+        if self.machines:
+            for machine in self.machines:
+                self.machine_combo.addItem(machine["name"], machine)
 
     def on_select_roll(self, index):
         if index >= 0:
@@ -126,18 +144,24 @@ class VisualizationPage(QWidget):
             QMessageBox.warning(self, "Ошибка", "Выберите рулоны, упаковку и станок.")
             return
 
+        required_pieces = self.pieces_spin.value()
+        if required_pieces < 1:
+            QMessageBox.warning(self, "Ошибка", "Количество штук должно быть больше 0")
+            return
+
         payload = {
             "base_material_id": self.selected_base_material['id'],
             "target_packaging_id": self.selected_target_packaging['id'],
             "machine_id": self.selected_machine['id'],
-            "user_id": 1  # фиксированный id пользователя
+            "user_id": 1,  # фиксированный id пользователя
+            "required_pieces": required_pieces
         }
 
         response = self.fetch_data("http://localhost:8000/tasks/", method="POST", json=payload)
         
         if response:
             QMessageBox.information(self, "Успех", "Задача успешно создана")
-            self.on_load_maps()
+            self.refresh_data()  # Обновляем данные после создания задачи
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось создать задачу")
 
@@ -145,10 +169,11 @@ class VisualizationPage(QWidget):
         tasks = self.fetch_data("http://localhost:8000/tasks/info")
         self.clear_cards()
 
-        for task in tasks:
-            if "task_id" not in task:
-                continue
-            self.cards_container.addWidget(self.build_card(task))
+        if tasks:
+            for task in tasks:
+                if "task_id" not in task:
+                    continue
+                self.cards_container.addWidget(self.build_card(task))
 
     def clear_cards(self):
         while self.cards_container.count():
