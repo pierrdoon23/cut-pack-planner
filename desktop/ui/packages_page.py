@@ -7,9 +7,7 @@ from .translations import tr
 from ui.widgets import CommonWidgets
 import requests
 
-
 API_BASE = "http://localhost:8000/creation"
-
 
 class PackagesPage(QWidget):
     def __init__(self):
@@ -73,13 +71,12 @@ class PackagesPage(QWidget):
             "is_two_streams": QCheckBox("Два потока")
         }
 
-        self.type_mapping = {
+        self.package_type_mapping = {
             "Вакуумный": "vacuum",
             "Флоу-пак": "flow_pack",
             "Термоусадочный": "shrink"
         }
-        # Добавляем типы упаковки
-        for label in self.type_mapping:
+        for label in self.package_type_mapping:
             form_fields["package_type"].addItem(label)
 
         self.seam_mapping = {
@@ -87,12 +84,10 @@ class PackagesPage(QWidget):
             "Одинарный": "single_seam",
             "Ультразвук": "ultrasonic"
         }
-        # Добавляем типы швов
         for label in self.seam_mapping:
             form_fields["seam_type"].addItem(label)
 
         return self._build_tab("target_packaging", headers, keys, form_fields)
-
 
     def build_machine_tab(self):
         headers = ["ID", "Название", "Скорость", "Ширина машины"]
@@ -100,7 +95,7 @@ class PackagesPage(QWidget):
 
         form_fields = {
             "name": QLineEdit(),
-            "speed": QLineEdit(),
+            "cutting_speed": QLineEdit(),
             "machine_width": QLineEdit()
         }
 
@@ -117,6 +112,7 @@ class PackagesPage(QWidget):
         form_layout = QHBoxLayout()
         for field in form_fields.values():
             form_layout.addWidget(field)
+
         add_btn = QPushButton("Добавить")
         form_layout.addWidget(add_btn)
         layout.addLayout(form_layout)
@@ -131,41 +127,24 @@ class PackagesPage(QWidget):
                         val = float(val) if '.' in val else int(val)
                     except ValueError:
                         val = val.strip()
-
                 elif isinstance(widget, QComboBox):
                     selected = widget.currentText()
-                    if key in ["package_type", "type"]:
+                    if key == "package_type":
                         val = self.package_type_mapping.get(selected, "")
-                    elif key == "seam":
+                    elif key == "seam_type":
                         val = self.seam_mapping.get(selected, "")
                     else:
                         val = selected.lower()
-
                 elif isinstance(widget, QCheckBox):
                     val = widget.isChecked()
-
                 else:
                     val = None
 
-                # Ключи, которые должны быть переименованы под API
-                if key == "type":
-                    data["package_type"] = val
-                elif key == "seam":
-                    data["seam_type"] = val
-                elif key == "double_cut":
-                    data["is_two_streams"] = val
-                elif key == "speed":
-                    data["cutting_speed"] = val
-                else:
-                    data[key] = val
+                data[key] = val
+
+            print("Данные перед отправкой:", data)
 
             try:
-                # Преобразуем значения enum в правильный формат
-                if 'package_type' in data:
-                    data['package_type'] = data['package_type'].lower()
-                if 'seam_type' in data:
-                    data['seam_type'] = data['seam_type'].lower()
-
                 response = requests.post(f"{API_BASE}/{endpoint}", json=data)
                 response.raise_for_status()
                 print(f"Добавлено в {endpoint}: {data}")
@@ -199,7 +178,6 @@ class PackagesPage(QWidget):
         widget.setLayout(layout)
         self.fetch_data(endpoint, table, data_keys)
         return widget
-
 
     def fetch_data(self, endpoint, table, data_keys):
         try:
