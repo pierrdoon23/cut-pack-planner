@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -42,3 +43,62 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_task)
     return db_task
+
+# --- BaseMaterial ---
+@router.post("/base_materials", response_model=schemas.BaseMaterialSchema)
+def create_base_material(material: schemas.BaseMaterialCreate, db: Session = Depends(get_db)):
+    # Check if material with this name already exists
+    existing_material = db.query(models.BaseMaterial).filter(models.BaseMaterial.name == material.name).first()
+    if existing_material:
+        raise HTTPException(status_code=400, detail=f"Материал с названием '{material.name}' уже существует")
+    
+    db_material = models.BaseMaterial(**material.dict())
+    db.add(db_material)
+    db.commit()
+    db.refresh(db_material)
+    return db_material
+
+# --- TargetPackaging ---
+@router.post("/target_packaging", response_model=schemas.TargetPackagingSchema)
+def create_target_packaging(packaging: schemas.TargetPackagingCreate, db: Session = Depends(get_db)):
+    db_packaging = models.TargetPackaging(**packaging.dict())
+    db.add(db_packaging)
+    db.commit()
+    db.refresh(db_packaging)
+    return db_packaging
+
+# --- User ---
+@router.post("/users", response_model=schemas.UserSchema)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = models.User(**user.dict())
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+# --- Machine ---
+@router.post("/machines", response_model=schemas.MachineSchema)
+def create_machine(machine: schemas.MachineCreate, db: Session = Depends(get_db)):
+    db_machine = models.Machine(**machine.dict())
+    db.add(db_machine)
+    db.commit()
+    db.refresh(db_machine)
+    return db_machine
+
+# --- Task ---
+@router.post("/tasks", response_model=schemas.TaskSchema)
+def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
+    db_task = models.Task(**task.dict())
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
+    return db_task
+
+# --- TaskInfo ---
+@router.post("/task_info", response_model=schemas.TaskInfoSchema)
+def create_task_info(info: schemas.TaskInfoCreate, db: Session = Depends(get_db)):
+    db_info = models.TaskInfo(**info.dict(), start_time=datetime.now(timezone.utc))
+    db.add(db_info)
+    db.commit()
+    db.refresh(db_info)
+    return db_info

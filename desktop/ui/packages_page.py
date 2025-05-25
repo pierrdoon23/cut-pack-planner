@@ -28,8 +28,6 @@ class PackagesPage(QWidget):
 
         self.tabs = QTabWidget()
 
-        self.tabs.addTab(self.build_task_tab(), "Задания")
-
         self.try_add_tab("base_materials", self.build_base_material_tab, "Сырьевые рулоны")
         self.try_add_tab("target_packaging", self.build_target_packaging_tab, "Целевые рулоны")
         self.try_add_tab("machines", self.build_machine_tab, "Станки")
@@ -39,55 +37,76 @@ class PackagesPage(QWidget):
         layout.addWidget(CommonWidgets.build_footer())
         self.setLayout(layout)
 
-    def build_task_tab(self):
-        widget = QWidget()
-        layout = QVBoxLayout()
-
-        # Форма добавления задания
-        form_layout = QHBoxLayout()
-        self.id_input = QLineEdit()
-        self.id_input.setPlaceholderText("ID рулона")
-        self.type_combo = QComboBox()
-        self.type_combo.addItems(["Вакуумный", "Флоу-пак", "Термоусадочный"])
-        self.seam_combo = QComboBox()
-        self.seam_combo.addItems(["Двойной", "Одинарный", "Ультразвук"])
-        self.width_input = QLineEdit("200")
-        self.length_input = QLineEdit("300")
-        self.count_input = QLineEdit("100")
-        self.double_cut = QCheckBox("Два потока")
-        self.tape_label = QCheckBox("Наклейка")
-        self.add_button = QPushButton("Добавить")
-        self.add_button.clicked.connect(self.add_task)
-
-        for w in [self.id_input, self.type_combo, self.seam_combo,
-                  self.width_input, self.length_input, self.count_input,
-                  self.double_cut, self.tape_label, self.add_button]:
-            form_layout.addWidget(w)
-
-        layout.addLayout(form_layout)
-
-        self.task_table_headers = ["ID", "Тип", "Шов", "Ширина", "Длина", "Кол-во", "2 потока", "На ленте"]
-        self.task_table = QTableWidget(0, len(self.task_table_headers))
-        self.task_table.setHorizontalHeaderLabels(self.task_table_headers)
-        layout.addWidget(self.task_table)
-
-        widget.setLayout(layout)
-        self.fetch_data("tasks", self.task_table, self.task_table_headers)
-        return widget
-
     def build_base_material_tab(self):
         headers = ["ID", "Название", "Длина", "Ширина", "Толщина", "Тип упаковки"]
-        return self._build_simple_tab("base_materials", headers)
+        keys = ["id", "name", "length", "width", "thickness", "package_type"]
+
+        form_fields = {
+            "name": QLineEdit(),
+            "length": QLineEdit(),
+            "width": QLineEdit(),
+            "thickness": QLineEdit(),
+            "package_type": QComboBox()
+        }
+
+        self.package_type_mapping = {
+            "Вакуумный": "vacuum",
+            "Флоу-пак": "flow_pack",
+            "Термоусадочный": "shrink"
+        }
+        for label in self.package_type_mapping:
+            form_fields["package_type"].addItem(label)
+
+        return self._build_tab("base_materials", headers, keys, form_fields)
 
     def build_target_packaging_tab(self):
         headers = ["ID", "Название", "Назначение", "Длина", "Ширина", "Тип", "Шов", "2 потока"]
-        return self._build_simple_tab("target_packaging", headers)
+        keys = ["id", "name", "purpose", "length", "width", "package_type", "seam_type", "is_two_streams"]
+
+        form_fields = {
+            "name": QLineEdit(),
+            "purpose": QLineEdit(),
+            "length": QLineEdit(),
+            "width": QLineEdit(),
+            "package_type": QComboBox(),
+            "seam_type": QComboBox(),
+            "is_two_streams": QCheckBox("Два потока")
+        }
+
+        self.type_mapping = {
+            "Вакуумный": "vacuum",
+            "Флоу-пак": "flow_pack",
+            "Термоусадочный": "shrink"
+        }
+        # Добавляем типы упаковки
+        for label in self.type_mapping:
+            form_fields["package_type"].addItem(label)
+
+        self.seam_mapping = {
+            "Двойной": "double_seam",
+            "Одинарный": "single_seam",
+            "Ультразвук": "ultrasonic"
+        }
+        # Добавляем типы швов
+        for label in self.seam_mapping:
+            form_fields["seam_type"].addItem(label)
+
+        return self._build_tab("target_packaging", headers, keys, form_fields)
+
 
     def build_machine_tab(self):
         headers = ["ID", "Название", "Скорость", "Ширина машины"]
-        return self._build_simple_tab("machines", headers)
+        keys = ["id", "name", "cutting_speed", "machine_width"]
 
-    def _build_simple_tab(self, endpoint, headers):
+        form_fields = {
+            "name": QLineEdit(),
+            "speed": QLineEdit(),
+            "machine_width": QLineEdit()
+        }
+
+        return self._build_tab("machines", headers, keys, form_fields)
+
+    def _build_tab(self, endpoint, headers, data_keys, form_fields):
         widget = QWidget()
         layout = QVBoxLayout()
 
@@ -95,60 +114,96 @@ class PackagesPage(QWidget):
         table.setHorizontalHeaderLabels(headers)
         layout.addWidget(table)
 
+        form_layout = QHBoxLayout()
+        for field in form_fields.values():
+            form_layout.addWidget(field)
+        add_btn = QPushButton("Добавить")
+        form_layout.addWidget(add_btn)
+        layout.addLayout(form_layout)
+
+        def on_add():
+            data = {}
+
+            for key, widget in form_fields.items():
+                if isinstance(widget, QLineEdit):
+                    val = widget.text()
+                    try:
+                        val = float(val) if '.' in val else int(val)
+                    except ValueError:
+                        val = val.strip()
+
+                elif isinstance(widget, QComboBox):
+                    selected = widget.currentText()
+                    if key in ["package_type", "type"]:
+                        val = self.package_type_mapping.get(selected, "")
+                    elif key == "seam":
+                        val = self.seam_mapping.get(selected, "")
+                    else:
+                        val = selected.lower()
+
+                elif isinstance(widget, QCheckBox):
+                    val = widget.isChecked()
+
+                else:
+                    val = None
+
+                # Ключи, которые должны быть переименованы под API
+                if key == "type":
+                    data["package_type"] = val
+                elif key == "seam":
+                    data["seam_type"] = val
+                elif key == "double_cut":
+                    data["is_two_streams"] = val
+                elif key == "speed":
+                    data["cutting_speed"] = val
+                else:
+                    data[key] = val
+
+            try:
+                response = requests.post(f"{API_BASE}/{endpoint}", json=data)
+                response.raise_for_status()
+                print(f"Добавлено в {endpoint}: {data}")
+                self.fetch_data(endpoint, table, data_keys)
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 400:
+                    error_msg = e.response.json().get('detail', 'Неизвестная ошибка')
+                    print(f"Ошибка добавления в {endpoint}: {error_msg}")
+                    # TODO: Показать сообщение об ошибке пользователю
+                else:
+                    print(f"Ошибка добавления в {endpoint}: {e}")
+            except Exception as e:
+                print(f"Ошибка добавления в {endpoint}: {e}")
+                if hasattr(e, 'response') and e.response is not None:
+                    print("Ответ сервера:", e.response.text)
+
+        add_btn.clicked.connect(on_add)
+
         refresh_btn = QPushButton("Обновить")
-        refresh_btn.clicked.connect(lambda: self.fetch_data(endpoint, table, headers))
+        refresh_btn.clicked.connect(lambda: self.fetch_data(endpoint, table, data_keys))
         layout.addWidget(refresh_btn)
 
         widget.setLayout(layout)
-        self.fetch_data(endpoint, table, headers)
+        self.fetch_data(endpoint, table, data_keys)
         return widget
 
-    def fetch_data(self, endpoint, table, headers):
+
+    def fetch_data(self, endpoint, table, data_keys):
         try:
             response = requests.get(f"{API_BASE}/{endpoint}")
             response.raise_for_status()
             data = response.json()
             table.setRowCount(0)
 
-            print(f"Данные с {endpoint}:", data)
-
-            # Use correct keys based on the endpoint
-            if endpoint == "tasks":
-                data_keys = ["roll_id", "type", "seam", "width", "length", "count", "double_cut", "tape"]
-            else:
-                # Keep existing logic for other endpoints
-                data_keys = [h.lower().replace(" ", "_") for h in headers]
-
             for row in data:
                 row_idx = table.rowCount()
                 table.insertRow(row_idx)
                 for col_idx, key in enumerate(data_keys):
-                    value = str(row.get(key, ""))
-                    # For boolean values, display "Да" or "Нет"
-                    if isinstance(row.get(key), bool):
-                        value = "Да" if row.get(key) else "Нет"
-                    table.setItem(row_idx, col_idx, QTableWidgetItem(value))
+                    value = row.get(key, "")
+                    if isinstance(value, bool):
+                        value = "Да" if value else "Нет"
+                    table.setItem(row_idx, col_idx, QTableWidgetItem(str(value)))
         except Exception as e:
             print(f"Ошибка загрузки {endpoint}: {e}")
-
-    def add_task(self):
-        data = {
-            "roll_id": self.id_input.text(),
-            "type": self.type_combo.currentText().lower(),
-            "seam": self.seam_combo.currentText().lower(),
-            "width": float(self.width_input.text()),
-            "length": float(self.length_input.text()),
-            "count": int(self.count_input.text()),
-            "double_cut": self.double_cut.isChecked(),
-            "tape": self.tape_label.isChecked(),
-        }
-        try:
-            r = requests.post(f"{API_BASE}/tasks", json=data)
-            r.raise_for_status()
-            print("Задание добавлено:", data)
-            self.fetch_data("tasks", self.task_table, self.task_table_headers)
-        except Exception as e:
-            print(f"Ошибка добавления задания: {e}")
 
     def try_add_tab(self, endpoint, builder, title):
         try:

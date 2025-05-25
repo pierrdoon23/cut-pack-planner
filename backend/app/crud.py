@@ -150,3 +150,40 @@ def update_task_status(db: Session, task_id: int, status: TaskStatus):
     db.commit()
     db.refresh(task)
     return task
+
+
+# В crud.py
+def create_base_material(db: Session, material: schemas.BaseMaterialCreate):
+    db_material = models.BaseMaterial(**material.dict())
+    db.add(db_material)
+    db.commit()
+    db.refresh(db_material)
+    return db_material
+
+def create_target_packaging(db: Session, packaging: schemas.TargetPackagingCreate):
+    db_packaging = models.TargetPackaging(**packaging.dict())
+    db.add(db_packaging)
+    db.commit()
+    db.refresh(db_packaging)
+    return db_packaging
+
+def create_user(db: Session, user: schemas.UserCreate):
+    db_user = models.User(**user.dict())  # В реальности — хешируй пароль!
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def create_machine(db: Session, machine: schemas.MachineCreate):
+    db_machine = models.Machine(**machine.dict())
+    db.add(db_machine)
+    db.commit()
+    db.refresh(db_machine)
+    return db_machine
+
+def create_task_info(db: Session, info: schemas.TaskInfoCreate):
+    db_info = models.TaskInfo(**info.dict(), start_time=datetime.utcnow())
+    db.add(db_info)
+    db.commit()
+    db.refresh(db_info)
+    return db_info
