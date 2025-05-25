@@ -1,11 +1,13 @@
 from PyQt5.QtWidgets import (
-    QWidget, QPushButton, QVBoxLayout, QHBoxLayout,
-    QTableWidget, QLineEdit, QComboBox, QCheckBox,
-    QTableWidgetItem, QTabWidget
+    QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLineEdit,
+    QComboBox, QCheckBox, QTabWidget, QLabel, QGroupBox, QMessageBox, 
+    QScrollArea
 )
 from .translations import tr
 from ui.widgets import CommonWidgets
 import requests
+from functools import partial
+
 
 API_BASE = "http://localhost:8000/creation"
 
@@ -102,108 +104,129 @@ class PackagesPage(QWidget):
         return self._build_tab("machines", headers, keys, form_fields)
 
     def _build_tab(self, endpoint, headers, data_keys, form_fields):
-        widget = QWidget()
-        layout = QVBoxLayout()
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
 
-        table = QTableWidget(0, len(headers))
-        table.setHorizontalHeaderLabels(headers)
-        layout.addWidget(table)
+        inner_widget = QWidget()
+        layout = QVBoxLayout(inner_widget)
 
+        # ======= 1. ФОРМА ДОБАВЛЕНИЯ =======
         form_layout = QHBoxLayout()
-        for field in form_fields.values():
-            form_layout.addWidget(field)
+        for key, field in form_fields.items():
+            if isinstance(field, QCheckBox):
+                checkbox_layout = QVBoxLayout()
+                checkbox_layout.addWidget(field)
+                form_layout.addLayout(checkbox_layout)
+            else:
+                form_layout.addWidget(field)
 
         add_btn = QPushButton("Добавить")
         form_layout.addWidget(add_btn)
         layout.addLayout(form_layout)
 
+        # ======= 2. КНОПКА ОБНОВЛЕНИЯ =======
+        refresh_btn = QPushButton("Обновить")
+        layout.addWidget(refresh_btn)
+
+        # ======= 3. КОНТЕЙНЕР С ДАННЫМИ =======
+        records_container = QVBoxLayout()
+        layout.addLayout(records_container)
+
         def on_add():
             data = {}
-
-            for key, widget in form_fields.items():
-                if isinstance(widget, QLineEdit):
-                    val = widget.text()
+            for key, field in form_fields.items():
+                if isinstance(field, QLineEdit):
+                    val = field.text()
                     try:
                         val = float(val) if '.' in val else int(val)
                     except ValueError:
                         val = val.strip()
-                elif isinstance(widget, QComboBox):
-                    selected = widget.currentText()
+                elif isinstance(field, QComboBox):
+                    selected = field.currentText()
                     if key == "package_type":
                         val = self.package_type_mapping.get(selected, "")
                     elif key == "seam_type":
                         val = self.seam_mapping.get(selected, "")
                     else:
                         val = selected.lower()
-                elif isinstance(widget, QCheckBox):
-                    val = widget.isChecked()
+                elif isinstance(field, QCheckBox):
+                    val = field.isChecked()
                 else:
                     val = None
-
                 data[key] = val
-
-            print("Данные перед отправкой:", data)
 
             try:
                 response = requests.post(f"{API_BASE}/{endpoint}", json=data)
                 response.raise_for_status()
-                print(f"Добавлено в {endpoint}: {data}")
-                self.fetch_data(endpoint, table, data_keys)
-            except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 400:
-                    error_msg = e.response.json().get('detail', 'Неизвестная ошибка')
-                    print(f"Ошибка добавления в {endpoint}: {error_msg}")
-                elif e.response.status_code == 422:
-                    error_data = e.response.json()
-                    if isinstance(error_data.get('detail'), list):
-                        error_msg = "Ошибка валидации данных:\n"
-                        for error in error_data['detail']:
-                            error_msg += f"{error.get('loc', [''])[-1]}: {error.get('msg', '')}\n"
-                    else:
-                        error_msg = str(error_data)
-                    print(f"Ошибка добавления в {endpoint}: {error_msg}")
-                else:
-                    print(f"Ошибка добавления в {endpoint}: {e}")
+                self.fetch_data(endpoint, records_container, data_keys)
             except Exception as e:
-                print(f"Ошибка добавления в {endpoint}: {e}")
-                if hasattr(e, 'response') and e.response is not None:
-                    print("Ответ сервера:", e.response.text)
+                print(f"Ошибка добавления: {e}")
+                QMessageBox.warning(self, "Ошибка", f"Не удалось добавить запись: {e}")
 
         add_btn.clicked.connect(on_add)
 
         refresh_btn = QPushButton("Обновить")
-        refresh_btn.clicked.connect(lambda: self.fetch_data(endpoint, table, data_keys))
+        refresh_btn.clicked.connect(lambda: self.fetch_data(endpoint, records_container, data_keys))
         layout.addWidget(refresh_btn)
 
-        widget.setLayout(layout)
-        self.fetch_data(endpoint, table, data_keys)
-        return widget
+        scroll.setWidget(inner_widget)
+        self.fetch_data(endpoint, records_container, data_keys)
+        return scroll
 
-    def fetch_data(self, endpoint, table, data_keys):
+
+    def fetch_data(self, endpoint, container, data_keys):
         try:
             response = requests.get(f"{API_BASE}/{endpoint}")
             response.raise_for_status()
             data = response.json()
-            table.setRowCount(0)
+
+            while container.count():
+                child = container.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
 
             for row in data:
-                row_idx = table.rowCount()
-                table.insertRow(row_idx)
-                for col_idx, key in enumerate(data_keys):
+                group = QGroupBox()
+                box_layout = QVBoxLayout()
+
+                for key in data_keys:
                     value = row.get(key, "")
                     if isinstance(value, bool):
                         value = "Да" if value else "Нет"
-                    table.setItem(row_idx, col_idx, QTableWidgetItem(str(value)))
+                    box_layout.addWidget(QLabel(f"<b>{key}</b>: {value}"))
+
+                delete_btn = QPushButton("Удалить")
+                delete_btn.clicked.connect(partial(self.delete_entry, endpoint, row["id"], container, data_keys))
+                box_layout.addWidget(delete_btn)
+
+                group.setLayout(box_layout)
+                container.addWidget(group)
+
         except Exception as e:
             print(f"Ошибка загрузки {endpoint}: {e}")
+            QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить данные: {e}")
+
+    def delete_entry(self, endpoint, record_id, container, data_keys):
+        try:
+            response = requests.delete(f"{API_BASE}/{endpoint}/{record_id}")
+            response.raise_for_status()
+            self.fetch_data(endpoint, container, data_keys)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 400:
+                error_msg = e.response.json().get('detail', 'Неизвестная ошибка')
+                QMessageBox.warning(self, "Ошибка", error_msg)
+            elif e.response.status_code == 404:
+                QMessageBox.warning(self, "Ошибка", "Запись не найдена")
+            else:
+                QMessageBox.warning(self, "Ошибка", f"Не удалось удалить запись: {e}")
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Не удалось удалить запись: {e}")
 
     def try_add_tab(self, endpoint, builder, title):
         try:
             response = requests.get(f"{API_BASE}/{endpoint}")
-            print(f"Проверка {title}: {response.status_code}")
             if response.status_code == 200:
                 self.tabs.addTab(builder(), title)
-                print(f"Вкладка добавлена: {title}")
             else:
                 print(f"Endpoint {endpoint} недоступен")
         except Exception as e:

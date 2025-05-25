@@ -102,3 +102,58 @@ def create_task_info(info: schemas.TaskInfoCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(db_info)
     return db_info
+
+@router.delete("/base_materials/{material_id}")
+def delete_base_material(material_id: int, db: Session = Depends(get_db)):
+    # Проверяем, есть ли связанные задачи
+    related_tasks = db.query(models.Task).filter(models.Task.base_material_id == material_id).first()
+    if related_tasks:
+        raise HTTPException(
+            status_code=400,
+            detail="Невозможно удалить материал, так как он используется в задачах"
+        )
+    
+    material = db.query(models.BaseMaterial).filter(models.BaseMaterial.id == material_id).first()
+    if not material:
+        raise HTTPException(status_code=404, detail="Материал не найден")
+    
+    db.delete(material)
+    db.commit()
+    return {"message": "Материал успешно удален"}
+
+@router.delete("/machines/{machine_id}")
+def delete_machine(machine_id: int, db: Session = Depends(get_db)):
+    # Проверяем, есть ли связанные задачи
+    related_tasks = db.query(models.Task).filter(models.Task.machine_id == machine_id).first()
+    if related_tasks:
+        raise HTTPException(
+            status_code=400,
+            detail="Невозможно удалить станок, так как он используется в задачах"
+        )
+    
+    machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    if not machine:
+        raise HTTPException(status_code=404, detail="Станок не найден")
+    
+    db.delete(machine)
+    db.commit()
+    return {"message": "Станок успешно удален"}
+
+@router.delete("/target_packaging/{package_id}")
+def delete_target_packaging(package_id: int, db: Session = Depends(get_db)):
+    # Проверяем, есть ли связанные задачи
+    related_tasks = db.query(models.Task).filter(models.Task.target_packaging_id == package_id).first()
+    if related_tasks:
+        raise HTTPException(
+            status_code=400,
+            detail="Невозможно удалить упаковку, так как она используется в задачах"
+        )
+    
+    packaging = db.query(models.TargetPackaging).filter(models.TargetPackaging.id == package_id).first()
+    if not packaging:
+        raise HTTPException(status_code=404, detail="Упаковка не найдена")
+    
+    db.delete(packaging)
+    db.commit()
+    return {"message": "Упаковка успешно удалена"}
+
