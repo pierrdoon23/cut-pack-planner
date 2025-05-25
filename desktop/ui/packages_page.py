@@ -160,6 +160,12 @@ class PackagesPage(QWidget):
                     data[key] = val
 
             try:
+                # Преобразуем значения enum в правильный формат
+                if 'package_type' in data:
+                    data['package_type'] = data['package_type'].lower()
+                if 'seam_type' in data:
+                    data['seam_type'] = data['seam_type'].lower()
+
                 response = requests.post(f"{API_BASE}/{endpoint}", json=data)
                 response.raise_for_status()
                 print(f"Добавлено в {endpoint}: {data}")
@@ -168,7 +174,15 @@ class PackagesPage(QWidget):
                 if e.response.status_code == 400:
                     error_msg = e.response.json().get('detail', 'Неизвестная ошибка')
                     print(f"Ошибка добавления в {endpoint}: {error_msg}")
-                    # TODO: Показать сообщение об ошибке пользователю
+                elif e.response.status_code == 422:
+                    error_data = e.response.json()
+                    if isinstance(error_data.get('detail'), list):
+                        error_msg = "Ошибка валидации данных:\n"
+                        for error in error_data['detail']:
+                            error_msg += f"{error.get('loc', [''])[-1]}: {error.get('msg', '')}\n"
+                    else:
+                        error_msg = str(error_data)
+                    print(f"Ошибка добавления в {endpoint}: {error_msg}")
                 else:
                     print(f"Ошибка добавления в {endpoint}: {e}")
             except Exception as e:
