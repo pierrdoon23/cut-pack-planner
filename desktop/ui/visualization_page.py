@@ -10,9 +10,9 @@ import requests
 
 
 class VisualizationPage(QWidget):
-    def __init__(self):
+    def __init__(self, user_id=None):
         super().__init__()
-
+        self.user_id = user_id
         self.selected_base_material = None
         self.selected_target_packaging = None
         self.selected_machine = None
@@ -141,7 +141,7 @@ class VisualizationPage(QWidget):
             "base_material_id": self.selected_base_material['id'],
             "target_packaging_id": self.selected_target_packaging['id'],
             "machine_id": self.selected_machine['id'],
-            "user_id": 1
+            "user_id": self.user_id
         }
 
         response = self.fetch_data("http://localhost:8000/tasks/", method="POST", json=payload)

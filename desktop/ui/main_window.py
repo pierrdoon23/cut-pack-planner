@@ -1,12 +1,11 @@
 import sys
 import requests
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QStatusBar, QWidget, QVBoxLayout,
-    QHBoxLayout, QFrame, QStackedWidget, QStyle, QDesktopWidget,
+    QApplication, QMainWindow, QWidget, QVBoxLayout,
+    QHBoxLayout, QFrame, QStackedWidget, QStyle,
     QDialog, QLabel, QLineEdit, QPushButton, QMessageBox
 )
 from datetime import datetime
-
 from .main_page import MainPage
 from .visualization_page import VisualizationPage
 from .packages_page import PackagesPage
@@ -112,7 +111,7 @@ class MainWindow(QMainWindow):
         # Страницы
         self.buttons = []
         self.stats_page = MainPage()
-        self.visual_page = VisualizationPage()
+        self.visual_page = VisualizationPage(user_id=self.user_id)
         self.packages_page = PackagesPage()
         self.report_page = ReportPage()
         self.settings_page = SettingsPage(self.change_language, self.change_theme)

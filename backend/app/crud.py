@@ -333,9 +333,17 @@ def get_task_report_data(db: Session):
     return result
 
 def delete_task(db: Session, task_id: int):
+    # Сначала удаляем связанную информацию о задаче
+    task_info = db.query(models.TaskInfo).filter(models.TaskInfo.task_id == task_id).first()
+    if task_info:
+        db.delete(task_info)
+        db.commit()
+
+    # Затем удаляем саму задачу
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Задача не найдена")
+    
     db.delete(task)
     db.commit()
 
@@ -343,9 +351,10 @@ def create_task(db: Session, task: schemas.TaskCreate):
     # Получаем базовый материал и целевую упаковку
     base_material = db.query(models.BaseMaterial).filter(models.BaseMaterial.id == task.base_material_id).first()
     target_packaging = db.query(models.TargetPackaging).filter(models.TargetPackaging.id == task.target_packaging_id).first()
+    machine = db.query(models.Machine).filter(models.Machine.id == task.machine_id).first()
     
-    if not base_material or not target_packaging:
-        raise HTTPException(status_code=404, detail="Материал или упаковка не найдены")
+    if not base_material or not target_packaging or not machine:
+        raise HTTPException(status_code=404, detail="Материал, упаковка или станок не найдены")
 
     # Рассчитываем количество штук
     total_available_length = base_material.length
@@ -364,13 +373,17 @@ def create_task(db: Session, task: schemas.TaskCreate):
     db.commit()
     db.refresh(db_task)
 
-    # Создаем информацию о задаче
+    # Рассчитываем время выполнения
     material_used = estimated_pieces * target_packaging.length
     waste = material_used * 0.02  # 2% отходов
+    cutting_time_minutes = material_used / machine.cutting_speed
+    end_time = datetime.utcnow() + timedelta(minutes=cutting_time_minutes)
 
+    # Создаем информацию о задаче
     task_info = models.TaskInfo(
         task_id=db_task.id,
         start_time=datetime.utcnow(),
+        end_time=end_time,
         material_used=round(material_used, 2),
         waste=round(waste, 2),
         status=task.status,
