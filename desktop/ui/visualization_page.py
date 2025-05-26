@@ -165,6 +165,24 @@ class VisualizationPage(QWidget):
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось создать задачу")
 
+    def delete_task(self, task_id):
+        confirm = QMessageBox.question(self, "Подтверждение", f"Удалить задачу #{task_id}?", QMessageBox.Yes | QMessageBox.No)
+        if confirm == QMessageBox.Yes:
+            response = self.fetch_data(f"http://localhost:8000/tasks/{task_id}", method="DELETE")
+            if response is not None:
+                QMessageBox.information(self, "Успех", f"Задача #{task_id} удалена")
+                self.refresh_data()
+            else:
+                QMessageBox.warning(self, "Ошибка", f"Не удалось удалить задачу #{task_id}")
+
+    def complete_task(self, task_id):
+        response = self.fetch_data(f"http://localhost:8000/tasks/{task_id}/status?status=completed", method="PUT")
+        if response is not None:
+            QMessageBox.information(self, "Успех", f"Задача #{task_id} завершена")
+            self.refresh_data()
+        else:
+            QMessageBox.warning(self, "Ошибка", f"Не удалось завершить задачу #{task_id}")
+
     def on_load_maps(self):
         tasks = self.fetch_data("http://localhost:8000/tasks/info")
         self.clear_cards()
@@ -221,5 +239,22 @@ class VisualizationPage(QWidget):
         layout.addWidget(line("📅 Примерное завершение", task.get("end_time", "—")))
         layout.addWidget(line("✅ Использовано материала", f'{task.get("material_used", 0)} м'))
         layout.addWidget(line("❌ Отходы", f'{task.get("waste", 0)} м'))
+
+        # Кнопки управления задачей
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
+
+        delete_button = QPushButton("🗑 Удалить")
+        delete_button.setStyleSheet("background-color: #ff4d4d; color: white; border-radius: 10px; padding: 5px 10px;")
+        delete_button.clicked.connect(lambda _, tid=task["task_id"]: self.delete_task(tid))
+        button_layout.addWidget(delete_button)
+
+        complete_button = QPushButton("✅ Завершить")
+        complete_button.setStyleSheet("background-color: #4CAF50; color: white; border-radius: 10px; padding: 5px 10px;")
+        complete_button.clicked.connect(lambda _, tid=task["task_id"]: self.complete_task(tid))
+        button_layout.addStretch()
+        button_layout.addWidget(complete_button)
+
+        layout.addLayout(button_layout)
 
         return card

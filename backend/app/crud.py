@@ -246,3 +246,10 @@ def get_task_report_data(db: Session):
         })
 
     return result
+
+def delete_task(db: Session, task_id: int):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+    db.delete(task)
+    db.commit()

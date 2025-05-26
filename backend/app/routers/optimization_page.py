@@ -117,3 +117,13 @@ def calculate_task(
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{task_id}")
+def delete_task(task_id: int, db: Session = Depends(database.get_db)):
+    try:
+        crud.delete_task(db, task_id)
+        return {"message": f"Задача {task_id} удалена"}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Ошибка удаления: {e}")
