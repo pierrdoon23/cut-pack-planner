@@ -1,7 +1,8 @@
 # This is now the entry point that imports components
+import sys
 from ui.main_window import launch_app
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     launch_app()
 
 

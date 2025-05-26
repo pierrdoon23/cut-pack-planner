@@ -8,6 +8,12 @@ from app.crud import authenticate_user
 
 router = APIRouter(prefix="/users", tags=["Пользователи"])
 
+@router.get("/ping")
+async def ping():
+    """
+    Эндпоинт для проверки доступности сервера
+    """
+    return {"status": "ok", "message": "Server is running"} 
 
 @router.post("/login", response_model=LoginResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):

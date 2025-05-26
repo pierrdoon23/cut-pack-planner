@@ -6,6 +6,9 @@ from PyQt5.QtWidgets import (
     QDialog, QLabel, QLineEdit, QPushButton, QMessageBox
 )
 from datetime import datetime
+from PyQt5.QtCore import Qt
+
+from .login_page import CombinedLoginWindow
 from .main_page import MainPage
 from .visualization_page import VisualizationPage
 from .packages_page import PackagesPage
@@ -132,6 +135,10 @@ class MainWindow(QMainWindow):
                                       lambda: self.stack.setCurrentWidget(self.report_page), self.buttons))
         self.buttons.append(NavButton(tr('settings'), self.style().standardIcon(QStyle.SP_DialogHelpButton),
                                       lambda: self.stack.setCurrentWidget(self.settings_page), self.buttons))
+        self.buttons.append(NavButton(tr('creation'), self.style().standardIcon(QStyle.SP_FileDialogDetailedView),
+                                      lambda: self.stack.setCurrentWidget(self.creation_page), self.buttons))
+        self.buttons.append(NavButton(tr('reports'), self.style().standardIcon(QStyle.SP_FileDialogContentsView),
+                                      lambda: self.stack.setCurrentWidget(self.reports_page), self.buttons))
 
         if self.user_role == 'admin':
             self.users_page = UsersPage()
@@ -178,12 +185,13 @@ class MainWindow(QMainWindow):
 def launch_app():
     app = QApplication(sys.argv)
 
-    login_window = LoginWindow()
+    login_window = CombinedLoginWindow()
     if login_window.exec_() == QDialog.Accepted:
         window = MainWindow(
             user_role=login_window.role,
             user_id=login_window.user_id,
-            username=login_window.username  # передаём логин
+            username=login_window.user_input.text()
         )
         window.show()
         sys.exit(app.exec_())
+
