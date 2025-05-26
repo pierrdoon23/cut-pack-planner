@@ -92,27 +92,44 @@ class ReportPage(QWidget):
         fig, ax = plt.subplots(figsize=(8, 5))
 
         task_labels = []
-        for i, task in enumerate(self.tasks):
-            if not task["end_time"]:
-                continue
+        y_positions = []
+        for idx, task in enumerate(self.tasks):
+            start_raw = task.get("start_time")
+            end_raw = task.get("end_time")
+
             try:
-                start = datetime.fromisoformat(task["start_time"])
-                end = datetime.fromisoformat(task["end_time"])
-                duration = (end - start).total_seconds() / 3600  # в часах
+                if not start_raw:
+                    continue  # пропустить, если нет начала
 
-                ax.barh(i, duration, left=start, height=0.4)
+                start = datetime.fromisoformat(start_raw)
+
+                if end_raw:
+                    end = datetime.fromisoformat(end_raw)
+                    duration = (end - start).total_seconds() / 3600  # часы
+                else:
+                    end = start
+                    duration = 1  # отображаем как короткую полосу (1 час)
+
+                y = len(task_labels)  # корректный индекс для оси Y
+                ax.barh(y, duration, left=start, height=0.4)
                 task_labels.append(task["name"])
+                y_positions.append(y)
+
             except Exception as e:
-                print(f"Ошибка в задаче {task['id']}: {e}")
+                print(f"Ошибка в задаче ID={task.get('id')}: {e}")
+                continue
 
-        ax.set_yticks(range(len(task_labels)))
-        ax.set_yticklabels(task_labels)
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d\n%H:%M"))
-        ax.set_xlabel("Дата / Время")
-        ax.set_ylabel("Задача")
-        ax.grid(True)
+        if not task_labels:
+            ax.text(0.5, 0.5, "Нет данных для отображения", ha='center', va='center')
+        else:
+            ax.set_yticks(y_positions)
+            ax.set_yticklabels(task_labels)
 
-        fig.autofmt_xdate()
+            ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d\n%H:%M"))
+            ax.set_xlabel("Дата / Время")
+            ax.set_ylabel("Задача")
+            ax.grid(True)
+            fig.autofmt_xdate()
 
         canvas = FigureCanvas(fig)
         canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)

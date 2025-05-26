@@ -1,10 +1,58 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import HTTPException
+from typing import Optional
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.models import Task, TaskInfo, BaseMaterial, TargetPackaging, TaskStatus
-from app import schemas
-from app import models
+from app.models import Task, TaskInfo, BaseMaterial, TargetPackaging, TaskStatus, User
+from app import models, schemas
+
+def authenticate_user(db: Session, username: str, password: str):
+    user = db.query(User).filter(User.full_name == username).first()
+    if not user or user.password != password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверное имя пользователя или пароль"
+        )
+    return user
+
+def get_user(db: Session, user_id: int) -> Optional[models.User]:
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+def get_user_by_name(db: Session, full_name: str) -> Optional[models.User]:
+    return db.query(models.User).filter(models.User.full_name == full_name).first()
+
+def get_users(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.User).offset(skip).limit(limit).all()
+
+def create_user(db: Session, user: schemas.UserCreate) -> models.User:
+    db_user = models.User(
+        full_name=user.full_name,
+        password=user.password,  # В реальном приложении хэшируйте пароль
+        role=user.role
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> Optional[models.User]:
+    db_user = get_user(db, user_id)
+    if db_user is None:
+        return None
+    update_data = user_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def delete_user(db: Session, user_id: int) -> bool:
+    db_user = get_user(db, user_id)
+    if db_user is None:
+        return False
+    db.delete(db_user)
+    db.commit()
+    return True
 
 # 1. Подсчет рулонов
 def get_rolls_count(db: Session):
@@ -81,14 +129,7 @@ def get_material_usage_donut(db: Session):
 
 #----------------------визуал картыв
 
-def create_task(db: Session, task: schemas.TaskCreate):
-    db_task = models.Task(**task.dict())
-    db.add(db_task)
-    db.commit()
-    db.refresh(db_task)
-    return db_task
-
-def create_task_info_with_calculation(db: Session, task_id: int, required_pieces: int):
+def create_task_info_with_calculation(db: Session, task_id: int):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Задача не найдена")
@@ -97,17 +138,18 @@ def create_task_info_with_calculation(db: Session, task_id: int, required_pieces
     target = task.target_packaging
     machine = task.machine
 
-    # Расчеты
-    required_total_length = target.length * required_pieces
     streams = 2 if target.is_two_streams else 1
     per_stream_width = target.width * streams
 
     if per_stream_width > machine.machine_width:
         raise HTTPException(status_code=400, detail="Ширина не влезает в машину")
 
-    material_used = required_total_length
+    # Максимально возможное количество упаковок
+    total_available_length = base.length
+    estimated_pieces = int(total_available_length / target.length)
+
+    material_used = estimated_pieces * target.length
     waste = material_used * 0.02
-    material_left = base.length - material_used - waste
     cutting_time_minutes = material_used / machine.cutting_speed
     end_time = datetime.utcnow() + timedelta(minutes=cutting_time_minutes)
 
@@ -126,26 +168,30 @@ def create_task_info_with_calculation(db: Session, task_id: int, required_pieces
 
     return {
         "task_info": task_info,
-        "material_left": round(material_left, 2),
+        "required_pieces": estimated_pieces,
         "cutting_time_minutes": round(cutting_time_minutes, 2),
-        "total_target_length": round(required_total_length, 2),
+        "material_used": round(material_used, 2),
+        "waste": round(waste, 2)
     }
+
 
 def get_all_tasks(db: Session):
     return db.query(models.Task).all()
 
-def get_task_info(db: Session):
-    tasks = db.query(models.Task).all()
-    result = []
-    for task in tasks:
-        task_info = db.query(models.TaskInfo).filter(models.TaskInfo.task_id == task.id).first()
-        result.append({
+def get_task_info(db: Session, task_id: int = None):
+    if task_id is not None:
+        task = db.query(models.Task).filter(models.Task.id == task_id).first()
+        if not task:
+            return None
+        task_info = db.query(models.TaskInfo).filter(models.TaskInfo.task_id == task_id).first()
+        return {
             "task_id": task.id,
             "status": task.status,
             "start_time": task.start_time,
             "end_time": task_info.end_time if task_info else None,
             "material_used": float(task_info.material_used) if task_info else None,
             "waste": float(task_info.waste) if task_info else None,
+            "value": task_info.value if task_info else None,
             "base_material": {
                 "name": task.base_material.name,
                 "length": task.base_material.length,
@@ -171,8 +217,47 @@ def get_task_info(db: Session):
                 "name": task.user.full_name,
                 "role": task.user.role
             }
-        })
-    return result
+        }
+    else:
+        tasks = db.query(models.Task).all()
+        result = []
+        for task in tasks:
+            task_info = db.query(models.TaskInfo).filter(models.TaskInfo.task_id == task.id).first()
+            result.append({
+                "task_id": task.id,
+                "status": task.status,
+                "start_time": task.start_time,
+                "end_time": task_info.end_time if task_info else None,
+                "material_used": float(task_info.material_used) if task_info else None,
+                "waste": float(task_info.waste) if task_info else None,
+                "value": task_info.value if task_info else None,
+                "base_material": {
+                    "name": task.base_material.name,
+                    "length": task.base_material.length,
+                    "width": task.base_material.width,
+                    "thickness": task.base_material.thickness,
+                    "package_type": task.base_material.package_type
+                },
+                "target_packaging": {
+                    "name": task.target_packaging.name,
+                    "purpose": task.target_packaging.purpose,
+                    "length": task.target_packaging.length,
+                    "width": task.target_packaging.width,
+                    "package_type": task.target_packaging.package_type,
+                    "seam_type": task.target_packaging.seam_type,
+                    "is_two_streams": task.target_packaging.is_two_streams
+                },
+                "machine": {
+                    "name": task.machine.name,
+                    "cutting_speed": task.machine.cutting_speed,
+                    "machine_width": task.machine.machine_width
+                },
+                "user": {
+                    "name": task.user.full_name,
+                    "role": task.user.role
+                }
+            })
+        return result
 
 def get_base_materials(db: Session):
     return db.query(models.BaseMaterial).all()
@@ -253,3 +338,46 @@ def delete_task(db: Session, task_id: int):
         raise HTTPException(status_code=404, detail="Задача не найдена")
     db.delete(task)
     db.commit()
+
+def create_task(db: Session, task: schemas.TaskCreate):
+    # Получаем базовый материал и целевую упаковку
+    base_material = db.query(models.BaseMaterial).filter(models.BaseMaterial.id == task.base_material_id).first()
+    target_packaging = db.query(models.TargetPackaging).filter(models.TargetPackaging.id == task.target_packaging_id).first()
+    
+    if not base_material or not target_packaging:
+        raise HTTPException(status_code=404, detail="Материал или упаковка не найдены")
+
+    # Рассчитываем количество штук
+    total_available_length = base_material.length
+    estimated_pieces = int(total_available_length / target_packaging.length)
+
+    # Создаем задачу
+    db_task = models.Task(
+        base_material_id=task.base_material_id,
+        target_packaging_id=task.target_packaging_id,
+        machine_id=task.machine_id,
+        user_id=task.user_id,
+        start_time=task.start_time or datetime.utcnow(),
+        status=task.status
+    )
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
+
+    # Создаем информацию о задаче
+    material_used = estimated_pieces * target_packaging.length
+    waste = material_used * 0.02  # 2% отходов
+
+    task_info = models.TaskInfo(
+        task_id=db_task.id,
+        start_time=datetime.utcnow(),
+        material_used=round(material_used, 2),
+        waste=round(waste, 2),
+        status=task.status,
+        value=estimated_pieces  # Сохраняем рассчитанное количество штук
+    )
+    db.add(task_info)
+    db.commit()
+    db.refresh(task_info)
+
+    return db_task

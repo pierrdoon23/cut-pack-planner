@@ -65,17 +65,6 @@ class VisualizationPage(QWidget):
 
         vbox.addLayout(hbox)
 
-        # Добавляем поле для ввода количества штук
-        pieces_hbox = QHBoxLayout()
-        pieces_hbox.addWidget(QLabel("Количество штук:"))
-        self.pieces_spin = QSpinBox()
-        self.pieces_spin.setMinimum(1)
-        self.pieces_spin.setMaximum(10000)
-        self.pieces_spin.setValue(1)
-        pieces_hbox.addWidget(self.pieces_spin)
-        pieces_hbox.addStretch()
-        vbox.addLayout(pieces_hbox)
-
         create_btn = QPushButton(tr('create'))
         create_btn.setMaximumWidth(200)
         create_btn.clicked.connect(self.on_create_task)
@@ -95,10 +84,14 @@ class VisualizationPage(QWidget):
         try:
             if method == "POST":
                 response = requests.post(url, json=json, timeout=2)
+            elif method == "PUT":
+                response = requests.put(url, json=json, timeout=2)
+            elif method == "DELETE":
+                response = requests.delete(url, timeout=2)
             else:
                 response = requests.get(url, timeout=2)
 
-            if response.status_code in [200, 201]:
+            if response.status_code in [200, 201, 204]:
                 try:
                     return response.json()
                 except ValueError:
@@ -144,24 +137,18 @@ class VisualizationPage(QWidget):
             QMessageBox.warning(self, "Ошибка", "Выберите рулоны, упаковку и станок.")
             return
 
-        required_pieces = self.pieces_spin.value()
-        if required_pieces < 1:
-            QMessageBox.warning(self, "Ошибка", "Количество штук должно быть больше 0")
-            return
-
         payload = {
             "base_material_id": self.selected_base_material['id'],
             "target_packaging_id": self.selected_target_packaging['id'],
             "machine_id": self.selected_machine['id'],
-            "user_id": 1,  # фиксированный id пользователя
-            "required_pieces": required_pieces
+            "user_id": 1
         }
 
         response = self.fetch_data("http://localhost:8000/tasks/", method="POST", json=payload)
         
         if response:
             QMessageBox.information(self, "Успех", "Задача успешно создана")
-            self.refresh_data()  # Обновляем данные после создания задачи
+            self.refresh_data()
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось создать задачу")
 
@@ -239,6 +226,7 @@ class VisualizationPage(QWidget):
         layout.addWidget(line("📅 Примерное завершение", task.get("end_time", "—")))
         layout.addWidget(line("✅ Использовано материала", f'{task.get("material_used", 0)} м'))
         layout.addWidget(line("❌ Отходы", f'{task.get("waste", 0)} м'))
+        layout.addWidget(line("📦 Количество упаковок", f'{task.get("value", 0)} шт'))
 
         # Кнопки управления задачей
         button_layout = QHBoxLayout()

@@ -86,6 +86,7 @@ class TaskInfo(Base):
     start_time = Column(DateTime, default=datetime.utcnow)
     end_time = Column(DateTime)
     status = Column(SQLAlchemyEnum(TaskStatus), default=TaskStatus.PLANNED)
+    value = Column(Integer)
     material_used = Column(DECIMAL(10, 2))  # в метрах
     waste = Column(DECIMAL(10, 2))         # в метрах
     

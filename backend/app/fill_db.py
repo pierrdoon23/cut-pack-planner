@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 import os
 import sys
+from decimal import Decimal
 from sqlalchemy.orm import Session
 
 # Добавляем путь для импорта модулей
@@ -103,10 +104,6 @@ def populate_test_data():
     db.add_all(users)
     db.commit()
 
-    # Получаем ID пользователей
-    user1_id = users[0].id
-    user2_id = users[1].id
-
     # 4. Станки
     machines = [
         Machine(
@@ -124,45 +121,47 @@ def populate_test_data():
     db.commit()
 
     # 5. Задачи
+    now = datetime.utcnow()
     tasks = [
         Task(
             base_material_id=materials[0].id,
             target_packaging_id=target_packages[0].id,
-            user_id=user1_id,
-            machine_id=machines[0].id
+            user_id=users[0].id,
+            machine_id=machines[0].id,
+            status=TaskStatus.COMPLETED,
+            start_time=now - timedelta(hours=3)
         ),
         Task(
             base_material_id=materials[1].id,
             target_packaging_id=target_packages[1].id,
-            user_id=user2_id,
-            machine_id=machines[1].id
+            user_id=users[1].id,
+            machine_id=machines[1].id,
+            status=TaskStatus.IN_PROGRESS,
+            start_time=now
         )
     ]
     db.add_all(tasks)
     db.commit()
 
-    # Получаем ID задач
-    task1_id = tasks[0].id
-    task2_id = tasks[1].id
-
     # 6. Информация о задачах
-    now = datetime.utcnow()
     task_info = [
         TaskInfo(
-            task_id=task1_id,
-            start_time=now - timedelta(hours=2),
-            end_time=now + timedelta(hours=1),
+            task_id=tasks[0].id,
+            start_time=tasks[0].start_time,
+            end_time=now,
             status=TaskStatus.COMPLETED,
-            material_used=45.3,
-            waste=2.7
+            value=1000,
+            material_used=Decimal("45.30"),
+            waste=Decimal("2.70")
         ),
         TaskInfo(
-            task_id=task2_id,
-            start_time=now,
+            task_id=tasks[1].id,
+            start_time=tasks[1].start_time,
             end_time=now + timedelta(hours=4),
             status=TaskStatus.IN_PROGRESS,
-            material_used=18.9,
-            waste=0.5
+            value=500,
+            material_used=Decimal("18.90"),
+            waste=Decimal("0.50")
         )
     ]
     db.add_all(task_info)

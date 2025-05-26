@@ -65,32 +65,26 @@ def get_cutting_maps(db: Session = Depends(database.get_db)):
 def get_target_packaging(db: Session = Depends(database.get_db)):
     return crud.get_target_packaging(db)
 
-@router.post("/", response_model=schemas.CreateTaskResponse, status_code=201)
-def create_task(task: schemas.TaskCreateWithPieces, db: Session = Depends(database.get_db)):
+@router.post("/", response_model=schemas.CreateTaskResponse)
+def create_task(task: schemas.TaskCreate, db: Session = Depends(database.get_db)):
     try:
-        if not task.start_time:
-            task.start_time = datetime.utcnow()
+        created_task = crud.create_task(db=db, task=task)
+        task_info = crud.get_task_info(db, created_task.id)
         
-        # Создаем задачу
-        task_create = schemas.TaskCreate(
-            base_material_id=task.base_material_id,
-            target_packaging_id=task.target_packaging_id,
-            machine_id=task.machine_id,
-            user_id=task.user_id,
-            start_time=task.start_time
-        )
-        created_task = crud.create_task(db=db, task=task_create)
-        
-        # Сразу делаем расчет и создаем TaskInfo
-        calculation_result = crud.create_task_info_with_calculation(db, created_task.id, task.required_pieces)
-        
-        return schemas.CreateTaskResponse(
-            task=schemas.TaskResponse.model_validate(created_task),
-            calculation=schemas.CalculationResponse.model_validate(calculation_result)
-        )
+        if not task_info:
+            raise HTTPException(status_code=500, detail="Failed to get task info")
+
+        return {
+            "task": created_task,
+            "calculation": {
+                "task_info": task_info,
+                "material_left": task_info.get("material_used", 0),
+                "cutting_time_minutes": 0,
+                "total_target_length": task_info.get("material_used", 0)
+            }
+        }
     except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Ошибка создания задачи: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{task_id}/status", response_model=schemas.Task)
 def update_task_status(task_id: int, status: TaskStatus, db: Session = Depends(database.get_db)):
