@@ -48,7 +48,7 @@ class LoginWindow(QDialog):
         self.role = None
         self.user_id = None
         self.token = None
-        self.username = None  # добавлено
+        self.username = None
 
     def handle_login(self):
         username = self.user_input.text()
@@ -65,7 +65,7 @@ class LoginWindow(QDialog):
                 self.role = data.get("role")
                 self.user_id = data.get("id")
                 self.token = data.get("token")
-                self.username = username  # сохраняем логин
+                self.username = username
                 self.accept()
             else:
                 QMessageBox.warning(self, "Ошибка", "Неверное имя пользователя или пароль.")
@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.user_role = user_role
         self.user_id = user_id
-        self.username = username  # получаем логин
+        self.username = username
 
         self.setWindowTitle("Оптимизация раскроя")
         self.showMaximized()
@@ -117,7 +117,11 @@ class MainWindow(QMainWindow):
         self.visual_page = VisualizationPage(user_id=self.user_id)
         self.packages_page = PackagesPage()
         self.report_page = ReportPage()
-        self.settings_page = SettingsPage(self.change_language, self.change_theme)
+        self.settings_page = SettingsPage(
+            change_language=self.change_language,
+            change_theme=self.change_theme,
+            logout_callback=self.logout_user
+        )
 
         self.stack.addWidget(self.stats_page)
         self.stack.addWidget(self.visual_page)
@@ -135,10 +139,6 @@ class MainWindow(QMainWindow):
                                       lambda: self.stack.setCurrentWidget(self.report_page), self.buttons))
         self.buttons.append(NavButton(tr('settings'), self.style().standardIcon(QStyle.SP_DialogHelpButton),
                                       lambda: self.stack.setCurrentWidget(self.settings_page), self.buttons))
-        self.buttons.append(NavButton(tr('creation'), self.style().standardIcon(QStyle.SP_FileDialogDetailedView),
-                                      lambda: self.stack.setCurrentWidget(self.creation_page), self.buttons))
-        self.buttons.append(NavButton(tr('reports'), self.style().standardIcon(QStyle.SP_FileDialogContentsView),
-                                      lambda: self.stack.setCurrentWidget(self.reports_page), self.buttons))
 
         if self.user_role == 'admin':
             self.users_page = UsersPage()
@@ -180,6 +180,10 @@ class MainWindow(QMainWindow):
     def apply_theme(self):
         from .themes import current_theme, light_theme, dark_theme
         self.setStyleSheet(light_theme if current_theme == 'light' else dark_theme)
+
+    def logout_user(self):
+        QMessageBox.information(self, "Выход", "Вы вышли из аккаунта.")
+        self.close()
 
 
 def launch_app():

@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QDialog, QHBoxLayout, QVBoxLayout,
     QLabel, QLineEdit, QPushButton, QMessageBox, QWidget
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSettings
 
 
 class CombinedLoginWindow(QDialog):
@@ -21,13 +21,13 @@ class CombinedLoginWindow(QDialog):
         # Настройки сервера
         server_group = QVBoxLayout()
         server_group.addWidget(QLabel("Настройки сервера:"))
-        
-        self.api_input = QLineEdit("http://localhost")
+
+        self.api_input = QLineEdit()
         self.api_input.setPlaceholderText("URL сервера")
         server_group.addWidget(QLabel("Адрес сервера:"))
         server_group.addWidget(self.api_input)
 
-        self.port_input = QLineEdit("8000")
+        self.port_input = QLineEdit()
         self.port_input.setPlaceholderText("Порт")
         server_group.addWidget(QLabel("Порт:"))
         server_group.addWidget(self.port_input)
@@ -71,6 +71,25 @@ class CombinedLoginWindow(QDialog):
         self.user_id = None
         self.token = None
 
+        # Загрузка настроек
+        self.load_settings()
+
+    def load_settings(self):
+        """Загрузка сохранённых данных"""
+        settings = QSettings("MyCompany", "MyApp")
+        self.api_input.setText(settings.value("server/api_url", "http://localhost"))
+        self.port_input.setText(settings.value("server/port", "8000"))
+        self.user_input.setText(settings.value("auth/username", ""))
+        self.password_input.setText(settings.value("auth/password", ""))  # опционально
+
+    def save_settings(self):
+        """Сохранение данных"""
+        settings = QSettings("MyCompany", "MyApp")
+        settings.setValue("server/api_url", self.api_input.text())
+        settings.setValue("server/port", self.port_input.text())
+        settings.setValue("auth/username", self.user_input.text())
+        settings.setValue("auth/password", self.password_input.text())  # опционально
+
     def check_connection(self):
         api_url = self.api_input.text().strip()
         port = self.port_input.text().strip()
@@ -102,6 +121,10 @@ class CombinedLoginWindow(QDialog):
                 self.role = data.get("role")
                 self.user_id = data.get("id")
                 self.token = data.get("token")
+
+                # Сохраняем данные
+                self.save_settings()
+
                 QMessageBox.information(self, "Успех", "Вы вошли в систему.")
                 self.accept()
             else:
