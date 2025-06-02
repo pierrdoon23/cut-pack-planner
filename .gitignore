@@ -1,0 +1,8 @@
+/images
+/__pycache__
+/badDesktop
+
+.DS_Store
+.idea
+.vscode
+.env
