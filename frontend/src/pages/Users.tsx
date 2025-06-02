@@ -58,19 +58,7 @@ const Users: React.FC = () => {
 
   const handleDeleteUser = async (userId: number) => {
     if (window.confirm('Вы уверены, что хотите удалить этого пользователя?')) {
-      try {
-        await deleteUserMutation.mutateAsync(userId);
-        toast({
-          title: "Успех",
-          description: "Пользователь успешно удален",
-        });
-      } catch (error) {
-        toast({
-          title: "Ошибка",
-          description: "Не удалось удалить пользователя",
-          variant: "destructive",
-        });
-      }
+      deleteUserMutation.mutate(userId);
     }
   };
 

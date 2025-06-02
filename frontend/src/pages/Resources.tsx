@@ -40,7 +40,6 @@ const Resources: React.FC = () => {
   const createMachine = useCreateMachine();
   const deleteMachine = useDeleteMachine();
 
-  // Form states
   const [baseMaterialForm, setBaseMaterialForm] = useState({
     name: '',
     length: '',
@@ -68,7 +67,6 @@ const Resources: React.FC = () => {
   const handleCreateBaseMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!baseMaterialForm.name || !baseMaterialForm.length || !baseMaterialForm.width || 
         !baseMaterialForm.thickness || !baseMaterialForm.package_type) {
       toast({ 
@@ -103,7 +101,6 @@ const Resources: React.FC = () => {
   const handleCreateTargetPackaging = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!targetPackagingForm.name || !targetPackagingForm.purpose || !targetPackagingForm.length || 
         !targetPackagingForm.width || !targetPackagingForm.package_type || !targetPackagingForm.seam_type) {
       toast({ 

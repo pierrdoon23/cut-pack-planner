@@ -1,7 +1,7 @@
-
 export interface ReportTask {
   id: number;
   name: string;
+  status: string;
   start_time: string | null;
   end_time: string | null;
   material_used?: number;

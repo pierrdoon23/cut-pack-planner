@@ -47,12 +47,31 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
     return db_user
 
 def delete_user(db: Session, user_id: int) -> bool:
-    db_user = get_user(db, user_id)
-    if db_user is None:
-        return False
-    db.delete(db_user)
-    db.commit()
-    return True
+    try:
+        db_user = get_user(db, user_id)
+        if db_user is None:
+            return False
+
+        # Находим все задачи пользователя
+        user_tasks = db.query(Task).filter(Task.user_id == user_id).all()
+        
+        # Удаляем информацию о задачах и сами задачи
+        for task in user_tasks:
+            task_info = db.query(TaskInfo).filter(TaskInfo.task_id == task.id).first()
+            if task_info:
+                db.delete(task_info)
+            db.delete(task)
+        
+        # Удаляем пользователя
+        db.delete(db_user)
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ошибка при удалении пользователя: {str(e)}"
+        )
 
 # 1. Подсчет рулонов
 def get_rolls_count(db: Session):
@@ -90,16 +109,38 @@ def get_packages_count(db: Session):
 def get_weekly_bar_chart(db: Session):
     labels = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
     today = datetime.now(timezone.utc)
+    
+    # Получаем начало текущей недели (понедельник)
     start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    print(f"Today: {today}")
+    print(f"Start of week: {start_of_week}")
     
     values = []
     for i in range(7):
         day_start = start_of_week + timedelta(days=i)
         day_end = day_start + timedelta(days=1)
-        count = db.query(TaskInfo).filter(TaskInfo.start_time >= day_start, TaskInfo.start_time < day_end).count()
+        
+        # Получаем все задачи за день для отладки
+        tasks = db.query(Task).join(TaskInfo).filter(
+            TaskInfo.end_time >= day_start,
+            TaskInfo.end_time < day_end,
+            Task.status == 'completed'
+        ).all()
+        
+        print(f"\nDay {i+1} ({day_start.date()}):")
+        for task in tasks:
+            task_info = db.query(TaskInfo).filter(TaskInfo.task_id == task.id).first()
+            print(f"Task {task.id}: status={task.status}, end_time={task_info.end_time if task_info else None}")
+        
+        count = len(tasks)
         values.append(count)
+        print(f"Count for day {i+1}: {count}")
     
-    return {"labels": labels, "values": values}
+    result = {"labels": labels, "values": values}
+    print(f"\nFinal result: {result}")
+    return result
 
 # 5. Типы нарезки
 def get_cutting_types_donut(db: Session):
@@ -275,7 +316,20 @@ def update_task_status(db: Session, task_id: int, status: TaskStatus):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise Exception("Задача не найдена")
+    
     task.status = status
+    
+    # Если задача завершена, обновляем end_time в TaskInfo
+    if status == 'completed':
+        task_info = db.query(models.TaskInfo).filter(models.TaskInfo.task_id == task_id).first()
+        if task_info:
+            current_time = datetime.now(timezone.utc)
+            print(f"Setting end_time for task {task_id} to {current_time}")
+            task_info.end_time = current_time
+            task_info.status = status
+        else:
+            print(f"No TaskInfo found for task {task_id}")
+    
     db.commit()
     db.refresh(task)
     return task
@@ -394,3 +448,78 @@ def create_task(db: Session, task: schemas.TaskCreate):
     db.refresh(task_info)
 
     return db_task
+
+def delete_base_material(db: Session, material_id: int):
+    # Проверяем существование материала
+    material = db.query(models.BaseMaterial).filter(models.BaseMaterial.id == material_id).first()
+    if not material:
+        raise HTTPException(status_code=404, detail="Материал не найден")
+    
+    # Проверяем, используется ли материал в задачах
+    task_exists = db.query(models.Task).filter(models.Task.base_material_id == material_id).first()
+    if task_exists:
+        raise HTTPException(
+            status_code=400,
+            detail="Невозможно удалить материал, так как он используется в задачах"
+        )
+    
+    try:
+        db.delete(material)
+        db.commit()
+        return {"message": "Материал успешно удален"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при удалении материала: {str(e)}"
+        )
+
+def delete_target_packaging(db: Session, packaging_id: int):
+    # Проверяем существование упаковки
+    packaging = db.query(models.TargetPackaging).filter(models.TargetPackaging.id == packaging_id).first()
+    if not packaging:
+        raise HTTPException(status_code=404, detail="Упаковка не найдена")
+    
+    # Проверяем, используется ли упаковка в задачах
+    task_exists = db.query(models.Task).filter(models.Task.target_packaging_id == packaging_id).first()
+    if task_exists:
+        raise HTTPException(
+            status_code=400,
+            detail="Невозможно удалить упаковку, так как она используется в задачах"
+        )
+    
+    try:
+        db.delete(packaging)
+        db.commit()
+        return {"message": "Упаковка успешно удалена"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при удалении упаковки: {str(e)}"
+        )
+
+def delete_machine(db: Session, machine_id: int):
+    # Проверяем существование станка
+    machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    if not machine:
+        raise HTTPException(status_code=404, detail="Станок не найден")
+    
+    # Проверяем, используется ли станок в задачах
+    task_exists = db.query(models.Task).filter(models.Task.machine_id == machine_id).first()
+    if task_exists:
+        raise HTTPException(
+            status_code=400,
+            detail="Невозможно удалить станок, так как он используется в задачах"
+        )
+    
+    try:
+        db.delete(machine)
+        db.commit()
+        return {"message": "Станок успешно удален"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при удалении станка: {str(e)}"
+        )

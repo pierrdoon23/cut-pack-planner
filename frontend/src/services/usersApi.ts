@@ -1,4 +1,3 @@
-
 import { User, UserCreate, UserUpdate, LoginRequest, LoginResponse } from '@/types/users';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -15,9 +14,12 @@ class UsersApiService {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const error = await response.json().catch(() => ({ detail: 'Произошла ошибка' }));
+        throw new Error(error.detail || 'Произошла ошибка');
+      }
+      
+      if (response.status === 204) {
+        return {} as T;
       }
       
       return await response.json();
@@ -40,7 +42,7 @@ class UsersApiService {
   }
 
   async getUsers(): Promise<User[]> {
-    return this.fetchData('/');
+    return this.fetchData('');
   }
 
   async getUser(userId: number): Promise<User> {
@@ -49,7 +51,7 @@ class UsersApiService {
 
   async createUser(user: UserCreate): Promise<User> {
     console.log('Создаем пользователя через users API:', user);
-    return this.fetchData('/', {
+    return this.fetchData('', {
       method: 'POST',
       body: JSON.stringify(user),
     });

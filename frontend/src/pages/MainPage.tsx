@@ -1,4 +1,3 @@
-
 import React from 'react';
 import DashboardCard from '@/components/DashboardCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -36,11 +35,18 @@ const MainPage: React.FC = () => {
     );
   }
 
-  // Подготавливаем данные для графиков
-  const weeklyChartData = data?.weeklyChart.labels.map((label, index) => ({
-    day: label,
-    value: data.weeklyChart.values[index] || 0
-  })) || [];
+  console.log('Raw Weekly Chart Data:', data?.weeklyChart);
+
+  const weeklyChartData = data?.weeklyChart.labels.map((label, index) => {
+    const value = data.weeklyChart.values[index] || 0;
+    console.log(`Day ${label}: ${value} tasks`);
+    return {
+      day: label,
+      value: value
+    };
+  }) || [];
+
+  console.log('Processed Weekly Chart Data:', weeklyChartData);
 
   const cuttingTypesData = data?.cuttingTypes.map((item, index) => ({
     name: item.type,
@@ -82,9 +88,17 @@ const MainPage: React.FC = () => {
             <BarChart data={weeklyChartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#3B82F6" />
+              <YAxis allowDecimals={false} domain={[0, 'auto']} />
+              <Tooltip 
+                formatter={(value) => [`${value} задач`, 'Количество']}
+                labelFormatter={(label) => `День: ${label}`}
+              />
+              <Bar 
+                dataKey="value" 
+                fill="#3B82F6" 
+                name="Выполненные задачи"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

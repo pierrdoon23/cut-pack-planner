@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app import models, schemas
+from app import models, schemas, crud
 from typing import List
 
 router = APIRouter(prefix="/creation", tags=["Creation"])
@@ -47,25 +47,20 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
 # --- BaseMaterial ---
 @router.post("/base_materials", response_model=schemas.BaseMaterialSchema)
 def create_base_material(material: schemas.BaseMaterialCreate, db: Session = Depends(get_db)):
-    # Check if material with this name already exists
-    existing_material = db.query(models.BaseMaterial).filter(models.BaseMaterial.name == material.name).first()
-    if existing_material:
-        raise HTTPException(status_code=400, detail=f"Материал с названием '{material.name}' уже существует")
-    
-    db_material = models.BaseMaterial(**material.dict())
-    db.add(db_material)
-    db.commit()
-    db.refresh(db_material)
-    return db_material
+    return crud.create_base_material(db, material)
+
+@router.delete("/base_materials/{material_id}")
+def delete_base_material(material_id: int, db: Session = Depends(get_db)):
+    return crud.delete_base_material(db, material_id)
 
 # --- TargetPackaging ---
 @router.post("/target_packaging", response_model=schemas.TargetPackagingSchema)
 def create_target_packaging(packaging: schemas.TargetPackagingCreate, db: Session = Depends(get_db)):
-    db_packaging = models.TargetPackaging(**packaging.dict())
-    db.add(db_packaging)
-    db.commit()
-    db.refresh(db_packaging)
-    return db_packaging
+    return crud.create_target_packaging(db, packaging)
+
+@router.delete("/target_packaging/{packaging_id}")
+def delete_target_packaging(packaging_id: int, db: Session = Depends(get_db)):
+    return crud.delete_target_packaging(db, packaging_id)
 
 # --- User ---
 @router.post("/users", response_model=schemas.UserSchema)
@@ -79,11 +74,25 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 # --- Machine ---
 @router.post("/machines", response_model=schemas.MachineSchema)
 def create_machine(machine: schemas.MachineCreate, db: Session = Depends(get_db)):
-    db_machine = models.Machine(**machine.dict())
-    db.add(db_machine)
+    return crud.create_machine(db, machine)
+
+@router.delete("/machines/{machine_id}")
+def delete_machine(machine_id: int, db: Session = Depends(get_db)):
+    machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    if not machine:
+        raise HTTPException(status_code=404, detail="Станок не найден")
+    
+    # Проверяем, используется ли станок в задачах
+    task_exists = db.query(models.Task).filter(models.Task.machine_id == machine_id).first()
+    if task_exists:
+        raise HTTPException(
+            status_code=400,
+            detail="Невозможно удалить станок, так как он используется в задачах"
+        )
+    
+    db.delete(machine)
     db.commit()
-    db.refresh(db_machine)
-    return db_machine
+    return {"message": "Станок успешно удален"}
 
 # --- Task ---
 @router.post("/tasks", response_model=schemas.TaskSchema)
@@ -102,58 +111,4 @@ def create_task_info(info: schemas.TaskInfoCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(db_info)
     return db_info
-
-@router.delete("/base_materials/{material_id}")
-def delete_base_material(material_id: int, db: Session = Depends(get_db)):
-    # Проверяем, есть ли связанные задачи
-    related_tasks = db.query(models.Task).filter(models.Task.base_material_id == material_id).first()
-    if related_tasks:
-        raise HTTPException(
-            status_code=400,
-            detail="Невозможно удалить материал, так как он используется в задачах"
-        )
-    
-    material = db.query(models.BaseMaterial).filter(models.BaseMaterial.id == material_id).first()
-    if not material:
-        raise HTTPException(status_code=404, detail="Материал не найден")
-    
-    db.delete(material)
-    db.commit()
-    return {"message": "Материал успешно удален"}
-
-@router.delete("/machines/{machine_id}")
-def delete_machine(machine_id: int, db: Session = Depends(get_db)):
-    # Проверяем, есть ли связанные задачи
-    related_tasks = db.query(models.Task).filter(models.Task.machine_id == machine_id).first()
-    if related_tasks:
-        raise HTTPException(
-            status_code=400,
-            detail="Невозможно удалить станок, так как он используется в задачах"
-        )
-    
-    machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
-    if not machine:
-        raise HTTPException(status_code=404, detail="Станок не найден")
-    
-    db.delete(machine)
-    db.commit()
-    return {"message": "Станок успешно удален"}
-
-@router.delete("/target_packaging/{package_id}")
-def delete_target_packaging(package_id: int, db: Session = Depends(get_db)):
-    # Проверяем, есть ли связанные задачи
-    related_tasks = db.query(models.Task).filter(models.Task.target_packaging_id == package_id).first()
-    if related_tasks:
-        raise HTTPException(
-            status_code=400,
-            detail="Невозможно удалить упаковку, так как она используется в задачах"
-        )
-    
-    packaging = db.query(models.TargetPackaging).filter(models.TargetPackaging.id == package_id).first()
-    if not packaging:
-        raise HTTPException(status_code=404, detail="Упаковка не найдена")
-    
-    db.delete(packaging)
-    db.commit()
-    return {"message": "Упаковка успешно удалена"}
 

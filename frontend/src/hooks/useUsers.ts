@@ -1,7 +1,7 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/services/usersApi';
 import { UserCreate, UserUpdate, LoginRequest } from '@/types/users';
+import { useToast } from '@/components/ui/use-toast';
 
 export const useUsers = () => {
   return useQuery({
@@ -43,12 +43,24 @@ export const useUpdateUser = () => {
 
 export const useDeleteUser = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   return useMutation({
     mutationFn: (userId: number) => usersApi.deleteUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({
+        title: "Успех",
+        description: "Пользователь успешно удален",
+      });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить пользователя",
+        variant: "destructive",
+      });
+    }
   });
 };
 

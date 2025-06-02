@@ -1,7 +1,12 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { creationApi } from '@/services/creationApi';
 import { BaseMaterialCreate, TargetPackagingCreate, MachineCreate, UserCreate, TaskCreate, TaskInfoCreate } from '@/types/creation';
+import { useToast } from '@/hooks/use-toast';
+import { AxiosError } from 'axios';
+
+interface ErrorResponse {
+  detail: string;
+}
 
 // Base Materials
 export const useBaseMaterials = () => {
@@ -13,22 +18,46 @@ export const useBaseMaterials = () => {
 
 export const useCreateBaseMaterial = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   return useMutation({
     mutationFn: (material: BaseMaterialCreate) => creationApi.createBaseMaterial(material),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['creation', 'baseMaterials'] });
+      toast({
+        title: "Успех",
+        description: "Материал успешно создан",
+      });
+    },
+    onError: (error: AxiosError<ErrorResponse>) => {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.response?.data?.detail || "Не удалось создать материал",
+      });
     },
   });
 };
 
 export const useDeleteBaseMaterial = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   return useMutation({
     mutationFn: (materialId: number) => creationApi.deleteBaseMaterial(materialId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['creation', 'baseMaterials'] });
+      toast({
+        title: "Успех",
+        description: "Материал успешно удален",
+      });
+    },
+    onError: (error: AxiosError<ErrorResponse>) => {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.response?.data?.detail || "Не удалось удалить материал",
+      });
     },
   });
 };
@@ -43,22 +72,46 @@ export const useTargetPackaging = () => {
 
 export const useCreateTargetPackaging = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   return useMutation({
     mutationFn: (packaging: TargetPackagingCreate) => creationApi.createTargetPackaging(packaging),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['creation', 'targetPackaging'] });
+      toast({
+        title: "Успех",
+        description: "Упаковка успешно создана",
+      });
+    },
+    onError: (error: AxiosError<ErrorResponse>) => {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.response?.data?.detail || "Не удалось создать упаковку",
+      });
     },
   });
 };
 
 export const useDeleteTargetPackaging = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   return useMutation({
     mutationFn: (packageId: number) => creationApi.deleteTargetPackaging(packageId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['creation', 'targetPackaging'] });
+      toast({
+        title: "Успех",
+        description: "Упаковка успешно удалена",
+      });
+    },
+    onError: (error: AxiosError<ErrorResponse>) => {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.response?.data?.detail || "Не удалось удалить упаковку",
+      });
     },
   });
 };
