@@ -1,7 +1,7 @@
 # Дипломная работа
 Данная дипломная работа создана для оптимизации автоматизации процессов по нарезке упаковки
 и использовались инструменты такие как: 
-Python3, PyQt5, FastApi, SQLAlchemy, PostgreSQL
+Python3, FastApi, SQLAlchemy, PostgreSQL, typescript, react, tailwindcss, redux, vite
 
 ---
 
