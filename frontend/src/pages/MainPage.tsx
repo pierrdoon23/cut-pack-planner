@@ -120,7 +120,7 @@ const MainPage: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, 'Процент']} />
+                <Tooltip formatter={(value, name) => [`${value}%`, `${name}`]} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -141,7 +141,7 @@ const MainPage: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, 'Процент']} />
+                <Tooltip formatter={(value, name) => [`${value}%`, `${name}`]} />
               </PieChart>
             </ResponsiveContainer>
           </div>
