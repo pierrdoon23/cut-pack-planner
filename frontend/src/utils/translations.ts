@@ -2,7 +2,7 @@ export const translations = {
   ru: {
     // Навигация
     mainPage: 'Главная страница',
-    cuttingMaps: 'Карты раскроя',
+    cuttingMaps: 'Задачи',
     resources: 'Создание ресурсов',
     reports: 'Отчеты',
     settings: 'Настройки',
@@ -73,7 +73,7 @@ export const translations = {
   en: {
     // Navigation
     mainPage: 'Main Page',
-    cuttingMaps: 'Cutting Maps',
+    cuttingMaps: 'Tasks',
     resources: 'Resource Creation',
     reports: 'Reports',
     settings: 'Settings',
