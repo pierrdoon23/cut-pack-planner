@@ -255,7 +255,7 @@ def get_task_info(db: Session, task_id: int = None):
                 "machine_width": task.machine.machine_width
             },
             "user": {
-                "name": task.user.full_name,
+                "full_name": task.user.full_name,
                 "role": task.user.role
             }
         }
@@ -294,7 +294,7 @@ def get_task_info(db: Session, task_id: int = None):
                     "machine_width": task.machine.machine_width
                 },
                 "user": {
-                    "name": task.user.full_name,
+                    "full_name": task.user.full_name,
                     "role": task.user.role
                 }
             })

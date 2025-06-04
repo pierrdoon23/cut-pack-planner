@@ -10,23 +10,23 @@ Python3, FastApi, SQLAlchemy, PostgreSQL, typescript, react, tailwindcss, redux,
 ### 1. Заполнить .env файл для бэкенда(парсера), из примера .env.example
 
 ### 2. Запустить бэкенд(парсер)
-   '''bash
+   ```bash
        cd backend
 
       python -m app.run
-   '''
+   ```
    или
-   '''bash
+   ```bash
        cd desktop
 
       python3 -m app.run
-   '''
+   ```
    
 ### 3. Запустить фронтенд
-   '''bash
+   ```bash
       cd frontend
 
       npm i 
 
       npm run dev
-   '''
+   ```
