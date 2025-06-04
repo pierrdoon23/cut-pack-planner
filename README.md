@@ -11,13 +11,13 @@ Python3, FastApi, SQLAlchemy, PostgreSQL, typescript, react, tailwindcss, redux,
 
 ### 2. Запустить бэкенд(парсер)
    ```bash
-       cd backend
+      cd backend
 
       python -m app.run
    ```
    или
    ```bash
-       cd desktop
+      cd backend
 
       python3 -m app.run
    ```

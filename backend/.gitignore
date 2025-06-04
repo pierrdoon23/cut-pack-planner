@@ -1,4 +1,16 @@
+# macOS system files
+.DS_Store
+**/.DS_Store
+
+# Python cache files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
 .env
 
-/__pycache__
 /routers/__pycache__
